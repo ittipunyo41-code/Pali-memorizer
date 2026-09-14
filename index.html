@@ -216,6 +216,43 @@
     /* หมวดที่ไม่ตรงกับคำค้นหา จะถูกซ่อนไปเลย ไม่เหลือหัวข้อว่างๆ ให้สับสน */
     details.no-match { display: none; }
 
+    /* ปุ่มสลับซ่อน/แสดงแถบข้าง */
+    .toggle-sidebar-btn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      background: #e5e5ea;
+      color: #1c1c1e;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 1000;
+      display: none;
+    }
+    .toggle-sidebar-btn:hover { background: #d1d1d6; }
+
+    /* สถานะซ่อนแถบด้านข้าง */
+    .sidebar.hidden {
+      flex: 0 0 0;
+      width: 0;
+      padding: 0;
+      border-right: none;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    /* ปุ่มแสดงเมื่อแถบซ่อน */
+    .app-shell.sidebar-hidden .toggle-sidebar-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     /* จอแคบ (มือถือ): สลับเป็นเรียงบนลงล่าง แถบเมนูจำกัดความสูงและเลื่อนในตัวเอง
        เนื้อหาหลักกินพื้นที่ที่เหลือและเลื่อนในตัวเองเช่นกัน ไม่มีส่วนไหนพึ่งพา vh อีกต่อไป */
     @media (max-width: 768px) {
@@ -238,7 +275,10 @@
 <div class="app-shell">
   <!-- Sidebar พร้อมโครงสร้าง 3 หมวดหลัก -->
     <div class="sidebar">
-    <div class="sidebar-title">🔒 ปาฏิโมกข์ & ธรรมบท</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+      <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="ซ่อน/แสดงเมนู">☰</button>
+      <div class="sidebar-title" style="margin-bottom: 0; flex: 1;">🔒 ปาฏิโมกข์ & ธรรมบท</div>
+    </div>
     <input type="text" class="search-box" placeholder="🔍 ค้นหาบทสวด/หัวข้อ..." onkeyup="filterMenu(this.value)">
 
     <div class="menu-item active" style="margin-bottom: 8px;" onclick="selectCustom(this)">✏️ พิมพ์ข้อความเอง</div>
@@ -473,6 +513,31 @@
 
   let isPracticeMode = false;
   let isAllRevealed = false;
+  let isSidebarHidden = false;
+
+  // ฟังก์ชันสลับแถบเมนู
+  function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const appShell = document.querySelector('.app-shell');
+    isSidebarHidden = !isSidebarHidden;
+    
+    sidebar.classList.toggle('hidden');
+    appShell.classList.toggle('sidebar-hidden');
+    
+    // เก็บสถานะลงใน localStorage
+    localStorage.setItem('sidebarHidden', isSidebarHidden);
+  }
+
+  // โหลดสถานะแถบเมนูจากครั้งที่แล้ว
+  window.addEventListener('load', () => {
+    if (localStorage.getItem('sidebarHidden') === 'true') {
+      const sidebar = document.querySelector('.sidebar');
+      const appShell = document.querySelector('.app-shell');
+      isSidebarHidden = true;
+      sidebar.classList.add('hidden');
+      appShell.classList.add('sidebar-hidden');
+    }
+  });
   let currentFontSize = 18;
 
   // จำสถานะ "เปิด/ปิด" เดิมของแต่ละหมวดไว้ตั้งแต่แรกโหลด เพื่อคืนค่าตอนล้างคำค้นหา
