@@ -218,9 +218,7 @@
 
     /* ปุ่มสลับซ่อน/แสดงแถบข้าง */
     .toggle-sidebar-btn {
-      position: absolute;
-      top: 16px;
-      left: 16px;
+      flex-shrink: 0;
       width: 36px;
       height: 36px;
       padding: 0;
@@ -231,10 +229,17 @@
       font-size: 18px;
       cursor: pointer;
       transition: all 0.2s ease;
-      z-index: 1000;
-      display: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
     }
     .toggle-sidebar-btn:hover { background: #d1d1d6; }
+
+    /* ซ่อนปุ่มตอนแถบเมนูแสดงปกติ */
+    .sidebar:not(.hidden) .toggle-sidebar-btn {
+      display: none;
+    }
 
     /* สถานะซ่อนแถบด้านข้าง */
     .sidebar.hidden {
@@ -246,11 +251,9 @@
       transition: all 0.3s ease;
     }
 
-    /* ปุ่มแสดงเมื่อแถบซ่อน */
-    .app-shell.sidebar-hidden .toggle-sidebar-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* แสดงปุ่มเมื่อแถบซ่อน */
+    .sidebar.hidden .toggle-sidebar-btn {
+      display: flex !important;
     }
 
     /* จอแคบ (มือถือ): สลับเป็นเรียงบนลงล่าง แถบเมนูจำกัดความสูงและเลื่อนในตัวเอง
@@ -275,13 +278,11 @@
 <div class="app-shell">
   <!-- Sidebar พร้อมโครงสร้าง 3 หมวดหลัก -->
     <div class="sidebar">
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-      <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="ซ่อน/แสดงเมนู">☰</button>
-      <div class="sidebar-title" style="margin-bottom: 0; flex: 1;">🔒 ปาฏิโมกข์ & ธรรมบท</div>
-    </div>
+    <div class="sidebar-title">🔒 ปาฏิโมกข์ & ธรรมบท</div>
+    <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="ซ่อนเมนู">☰</button>
     <input type="text" class="search-box" placeholder="🔍 ค้นหาบทสวด/หัวข้อ..." onkeyup="filterMenu(this.value)">
 
-    <div class="menu-item active" style="margin-bottom: 8px;" onclick="selectCustom(this)">✏️ พิมพ์ข้อความเอง</div>
+    <div class="menu-item active" style="margin-bottom: 8px;" onclick="selectCustom(this)" id="customTextMenuItem">✏️ พิมพ์ข้อความเอง</div>
 
     <!-- 1. ภิกขุปาฏิโมกขปาฬิ -->
     <details open>
@@ -528,14 +529,18 @@
     localStorage.setItem('sidebarHidden', isSidebarHidden);
   }
 
-  // โหลดสถานะแถบเมนูจากครั้งที่แล้ว
+  // โหลดสถานะแถบเมนูจากครั้งที่แล้ว และแสดงส่วน input เป็นค่าเริ่มต้น
   window.addEventListener('load', () => {
     if (localStorage.getItem('sidebarHidden') === 'true') {
       const sidebar = document.querySelector('.sidebar');
-      const appShell = document.querySelector('.app-shell');
       isSidebarHidden = true;
       sidebar.classList.add('hidden');
-      appShell.classList.add('sidebar-hidden');
+    }
+    // ตรวจสอบว่าเป็นการโหลดครั้งแรกและแสดงส่วน input
+    if (!localStorage.getItem('hasVisited')) {
+      document.getElementById('inputSection').style.display = 'block';
+      document.getElementById('practiceSection').style.display = 'none';
+      localStorage.setItem('hasVisited', 'true');
     }
   });
   let currentFontSize = 18;
