@@ -3,33 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Text Blur Memorizer</title>
+  <title>Pali & Text Blur Memorizer</title>
   <style>
     * { box-sizing: border-box; }
-    body {
+    html, body {
+      margin: 0;
+      padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Thonburi, sans-serif;
-      padding: 20px;
       background-color: #f2f2f7;
       color: #1c1c1e;
-      margin: 0;
     }
+
+    /*
+      โครง "shell" ของแอป — ใช้ position:fixed + inset:0 แทนการตั้ง height:100vh บน body
+      เหตุผล: บนมือถือ ความสูง viewport (100vh) จะเปลี่ยนไปมาเวลาแถบ address bar ยืด/หด
+      ทำให้ layout ที่อิง vh คำนวณความสูงผิดพลาดเป็นระยะ ๆ (นี่คือต้นตอปัญหาที่แก้แบบแพตช์ก่อนหน้านี้)
+      การใช้ fixed + inset:0 ทำให้เบราว์เซอร์คำนวณพื้นที่จริงที่มองเห็นให้เอง เสถียรกว่า
+      และไม่ต้องพึ่ง body { overflow:hidden } เลย จึงไม่มีทางที่เนื้อหาจะ "ล้นแล้วถูกตัดจนเลื่อนไม่ได้"
+    */
+    .app-shell {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: row;
+    }
+
+    /* แถบเมนูด้านซ้าย เลื่อนได้อิสระในตัวเอง ไม่ต้องพึ่งความสูงของหน้าทั้งหมด */
+    .sidebar {
+      flex: 0 0 320px;
+      min-width: 0;
+      min-height: 0;
+      background-color: #ffffff;
+      border-right: 1px solid #e5e5ea;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    .sidebar-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #007aff;
+      margin-bottom: 12px;
+      padding-left: 8px;
+    }
+
+    /* ช่องค้นหาบทสวด */
+    .search-box {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid #c7c7cc;
+      font-size: 14px;
+      margin-bottom: 14px;
+      outline: none;
+    }
+
+    /* หมวดหมู่พับเก็บได้ (Accordion) */
+    details {
+      margin-bottom: 8px;
+      border-radius: 10px;
+      background-color: #f9f9fb;
+      border: 1px solid #e5e5ea;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    summary {
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      color: #1c1c1e;
+      outline: none;
+    }
+    summary:hover { background-color: #f2f2f7; }
+
+    .menu-list {
+      display: flex;
+      flex-direction: column;
+      padding: 4px 8px 8px 8px;
+      gap: 2px;
+    }
+
+    .menu-item {
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #3a3a3c;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .menu-item:hover { background-color: #e5e5ea; }
+    .menu-item.active { background-color: #007aff; color: white; }
+    .menu-item.menu-loading { opacity: 0.4; pointer-events: none; }
+
+    /* พื้นที่แสดงผลหลัก เลื่อนได้อิสระของตัวเองเช่นกัน */
+    .main-content {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
     .container {
+      width: 100%;
       max-width: 850px;
-      margin: 0 auto;
       background: #ffffff;
       padding: 24px;
       border-radius: 18px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      align-self: flex-start;
     }
-    h2 { margin-top: 0; color: #007aff; text-align: center; font-size: 22px; }
-    
+
     textarea {
       width: 100%;
-      height: 140px;
+      height: 180px;
       padding: 14px;
       border-radius: 12px;
       border: 1px solid #c7c7cc;
-      font-size: 16px;
+      font-size: 17px;
       line-height: 1.6;
       resize: vertical;
       outline: none;
@@ -55,25 +157,23 @@
       touch-action: manipulation;
     }
     button:active { transform: scale(0.97); }
-    
+
     .btn-main { background-color: #007aff; color: white; }
     .btn-confirm { background-color: #34c759; color: white; }
+    .btn-random { background-color: #af52de; color: white; }
     .btn-toggle { background-color: #5856d6; color: white; }
     .btn-reselect { background-color: #ff9500; color: white; }
     .btn-clear { background-color: #ff3b30; color: white; }
 
-    /* แถบปรับขนาดตัวอักษร */
     .font-control-bar {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
+      justify-content: space-between;
       margin-top: 10px;
       font-size: 14px;
       color: #8e8e93;
     }
     .btn-font {
-      flex: initial;
       min-width: 36px;
       height: 36px;
       padding: 0;
@@ -83,20 +183,20 @@
       font-size: 14px;
     }
 
-    /* พื้นที่แสดงผลคำ - ปรับความสูงบรรทัดและขนาดให้อ่านสบายตาขึ้น */
     #displayArea {
-      font-size: 18px;
-      line-height: 1.85;
-      margin-top: 10px;
-      padding: 20px;
-      background: #fafafa;
-      border: 1px solid #e5e5ea;
-      border-radius: 12px;
-      min-height: 120px;
-      word-wrap: break-word;
-    }
+  font-size: 18px;
+  line-height: 1.85;
+  margin-top: 10px;
+  padding: 20px;
+  background: #fafafa;
+  border: 1px solid #e5e5ea;
+  border-radius: 12px;
+  min-height: 120px;
+  word-wrap: break-word;
+  white-space: pre-wrap; /* เพิ่มบรรทัดนี้ลงไป */
+}
 
-    /* ปรับแต่งลักษณะคำให้บางลง ไม่หนาหนักตา */
+
     .word {
       cursor: pointer;
       padding: 1px 4px;
@@ -107,109 +207,378 @@
       transition: background-color 0.15s ease, color 0.15s ease;
     }
 
-    /* สถานะไฮไลต์เลือกคำ */
-    .mark-blur {
-      background-color: #ffe600;
-      color: #000000;
-      font-weight: 600;
-    }
+    .mark-blur { background-color: #ffe600; color: #000000; font-weight: 600; }
+    .is-blurred { background-color: #3a3a3c; color: transparent; border-radius: 4px; }
+    .is-blurred.revealed { background-color: #d1f2d9; color: #0f5132; font-weight: 600; }
 
-    /* สถานะบังคำ (สีทึบโทนสบายตา) */
-    .is-blurred {
-      background-color: #3a3a3c;
-      color: transparent;
-      filter: none;
-      border-radius: 4px;
-    }
+    .instructions { font-size: 14px; color: #8e8e93; }
 
-    /* สถานะเฉลย */
-    .is-blurred.revealed {
-      background-color: #d1f2d9;
-      color: #0f5132;
-      font-weight: 600;
-    }
-    
-    .instructions {
-      font-size: 14px;
-      color: #8e8e93;
-      margin-top: 8px;
-      text-align: center;
+    /* หมวดที่ไม่ตรงกับคำค้นหา จะถูกซ่อนไปเลย ไม่เหลือหัวข้อว่างๆ ให้สับสน */
+    details.no-match { display: none; }
+
+    /* จอแคบ (มือถือ): สลับเป็นเรียงบนลงล่าง แถบเมนูจำกัดความสูงและเลื่อนในตัวเอง
+       เนื้อหาหลักกินพื้นที่ที่เหลือและเลื่อนในตัวเองเช่นกัน ไม่มีส่วนไหนพึ่งพา vh อีกต่อไป */
+    @media (max-width: 768px) {
+      .app-shell { flex-direction: column; }
+      .sidebar {
+        flex: 0 1 40%;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e5e5ea;
+      }
+      .main-content {
+        flex: 1 1 auto;
+        padding: 12px;
+      }
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>🔒 Text Blur Memorizer</h2>
-  
-  <div id="inputSection">
-    <textarea id="inputText" placeholder="วางเนื้อหาหรือบทเรียนที่ต้องการท่องจำที่นี่..."></textarea>
-    <div class="btn-group">
-      <button class="btn-main" onclick="loadText()">นำเข้าข้อความ</button>
-    </div>
+<div class="app-shell">
+  <!-- Sidebar พร้อมโครงสร้าง 3 หมวดหลัก -->
+    <div class="sidebar">
+    <div class="sidebar-title">🔒 ปาฏิโมกข์ & ธรรมบท</div>
+    <input type="text" class="search-box" placeholder="🔍 ค้นหาบทสวด/หัวข้อ..." onkeyup="filterMenu(this.value)">
+
+    <div class="menu-item active" style="margin-bottom: 8px;" onclick="selectCustom(this)">✏️ พิมพ์ข้อความเอง</div>
+
+    <!-- 1. ภิกขุปาฏิโมกขปาฬิ -->
+    <details open>
+      <summary>🙏 ภิกขุปาฏิโมกขปาฬิ</summary>
+      <div class="menu-list">
+        <div class="menu-item" onclick="loadPreset('bk_1', this)">นิทานุทฺเทโส</div>
+        <div class="menu-item" onclick="loadPreset('bk_2', this)">ปาราชิกุทฺเทโส</div>
+        <div class="menu-item" onclick="loadPreset('bk_3', this)">สงฺฆาทิเสสุทฺเทโส</div>
+        <div class="menu-item" onclick="loadPreset('bk_4', this)">อนิยตุทฺเทโส</div>
+
+        <details>
+          <summary>นิสฺสคฺคิยปาจิตฺติยา (๓ วรรค)</summary>
+          <div class="menu-list">
+            <div class="menu-item" onclick="loadPreset('bk_5_kathina', this)">๑. กถินวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_5_kosiya', this)">๒. โกสิยวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_5_patta', this)">๓. ปัตตวรรค</div>
+          </div>
+        </details>
+
+        <details>
+          <summary>สุทฺธปาจิตฺติยา (๙ วรรค)</summary>
+          <div class="menu-list">
+            <div class="menu-item" onclick="loadPreset('bk_6_musavada', this)">๑. มุสาวาทวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_bhutagama', this)">๒. ภูตคามวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_ovada', this)">๓. โอวาทวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_bhojana', this)">๔. โภชนวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_acelaka', this)">๕. อเจลกวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_surapana', this)">๖. สุราปานวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_sappanaka', this)">๗. สัปปาณกวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_sahadhammika', this)">๘. สหธรรมิกวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_6_ratana', this)">๙. รตนวรรค</div>
+          </div>
+        </details>
+
+        <div class="menu-item" onclick="loadPreset('bk_7', this)">ปาฏิเทสนียา</div>
+        
+        <details>
+          <summary>เสขิยา (๗ วรรค)</summary>
+          <div class="menu-list">
+            <div class="menu-item" onclick="loadPreset('bk_8_parimandala', this)">๑. ปริมณฑลวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_8_ujjagghika', this)">๒. อุชฌัคฆิกวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_8_khambhakata', this)">๓. ขัมภกตวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_8_sakkacca', this)">๔. สักกัจจวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_8_kabala', this)">๕. กพฬวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_8_surusuru', this)">๖. สุรุสุรุวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bk_8_paduka', this)">๗. ปาทุกวรรค</div>
+          </div>
+        </details>
+
+        <div class="menu-item" onclick="loadPreset('bk_9', this)">อธิกรณสมถา</div>
+      </div>
+    </details>
+
+    <!-- 2. ภิกขุณีปาฏิโมกขปาฬิ -->
+    <details>
+      <summary>🪷 ภิกขุณีปาฏิโมกขปาฬิ</summary>
+      <div class="menu-list">
+        <div class="menu-item" onclick="loadPreset('bni_1', this)">นิทานุทฺเทโส</div>
+        <div class="menu-item" onclick="loadPreset('bni_2', this)">ปาราชิกุทฺเทโส</div>
+        <div class="menu-item" onclick="loadPreset('bni_3', this)">สงฺฆาทิเสสุทฺเทโส</div>
+
+        <details>
+          <summary>นิสฺสคฺคิยปาจิตฺติยา (๓ วรรค)</summary>
+          <div class="menu-list">
+            <div class="menu-item" onclick="loadPreset('bni_4_patta1', this)">๑. ปัตตวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_4_civara', this)">๒. จีวรวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_4_patta2', this)">๓. ปัตตวรรค (ตติยปัตตวรรค)</div>
+          </div>
+        </details>
+
+        <details>
+          <summary>สุทฺธปาจิตฺติยา (๑๖ วรรค)</summary>
+          <div class="menu-list">
+            <div class="menu-item" onclick="loadPreset('bni_5_lasuna', this)">๑. ลสุณวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_rattandhakara', this)">๒. รัตตันธการวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_nagga', this)">๓. นัคควรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_tuvatta', this)">๔. ตุวัฏฏวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_cittagara', this)">๕. จิตตาคารวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_arama', this)">๖. อารามวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_gabbhini', this)">๗. คัพภินีวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_kumaribhuta', this)">๘. กุมาริภูตวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_chattupahana', this)">๙. ฉัตตุปาหนวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_musavada', this)">๑๐. มุสาวาทวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_bhutagama', this)">๑๑. ภูตคามวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_bhojana', this)">๑๒. โภชนวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_caritta', this)">๑๓. จาริตตวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_joti', this)">๑๔. โชติวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_ditthi', this)">๑๕. ทิฏฐิวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_5_dhammika', this)">๑๖. ธัมมิกวรรค</div>
+          </div>
+        </details>
+
+        <div class="menu-item" onclick="loadPreset('bni_6', this)">ปาฏิเทสนียา</div>
+        
+        <details>
+          <summary>เสขิยา (๗ วรรค)</summary>
+          <div class="menu-list">
+            <div class="menu-item" onclick="loadPreset('bni_7_parimandala', this)">๑. ปริมณฑลวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_7_ujjagghika', this)">๒. อุชฌัคฆิกวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_7_khambhakata', this)">๓. ขัมภกตวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_7_sakkacca', this)">๔. สักกัจจวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_7_kabala', this)">๕. กพฬวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_7_surusuru', this)">๖. สุรุสุรุวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_7_paduka', this)">๗. ปาทุกวรรค</div>
+          </div>
+        </details>
+
+        <div class="menu-item" onclick="loadPreset('bni_8', this)">อธิกรณสมถา</div>
+      </div>
+    </details>
+
+    <!-- 3. ธมฺมปทปาฬิ ๒๖ วรรค -->
+    <details>
+      <summary>📖 ธรรมบท (๒๖ วรรค)</summary>
+      <div class="menu-list">
+        <div class="menu-item" onclick="loadPreset('dh_1', this)">๑. ยมกวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_2', this)">๒. อปฺปมาทวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_3', this)">๓. จิตฺตวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_4', this)">๔. ปุปฺผวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_5', this)">๕. พาลวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_6', this)">๖. ปณฺฑิตวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_7', this)">๗. อรหนฺตวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_8', this)">๘. สหสฺสวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_9', this)">๙. ปาปวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_10', this)">๑๐. ทณฺฑวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_11', this)">๑๑. ชราวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_12', this)">๑๒. อตฺตวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_13', this)">๑๓. โลกวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_14', this)">๑๔. พุทฺธวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_15', this)">๑๕. สุขวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_16', this)">๑๖. ปิยวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_17', this)">๑๗. โกธวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_18', this)">๑๘. มลวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_19', this)">๑๙. ธมฺมฏฺฐวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_20', this)">๒๐. มคฺควคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_21', this)">๒๑. ปกิณฺณกวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_22', this)">๒๒. นิรยวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_23', this)">๒๓. นาควคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_24', this)">๒๔. ตณฺหาวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_25', this)">๒๕. ภิกฺขุวคฺค</div>
+        <div class="menu-item" onclick="loadPreset('dh_26', this)">๒๖. พฺราหฺมณวคฺค</div>
+      </div>
+    </details>
   </div>
 
-  <div id="practiceSection" style="display: none;">
-    <div class="instructions" id="statusTip">💡 แตะเลือกคำที่ต้องการบัง แล้วกด "ตกลง"</div>
-    
-    <div class="font-control-bar">
-      <span>ขนาดอักษร:</span>
-      <button class="btn-font" onclick="changeFontSize(-2)">A-</button>
-      <button class="btn-font" onclick="changeFontSize(2)">A+</button>
-    </div>
 
-    <div id="displayArea"></div>
+  <!-- พื้นที่แสดงผลหลัก -->
+  <div class="main-content">
+    <div class="container">
 
-    <div class="btn-group">
-      <button id="btnConfirm" class="btn-confirm" onclick="confirmBlur()">ตกลง (เริ่มบังคำ)</button>
-      <button id="btnToggle" class="btn-toggle" onclick="toggleAll()" style="display: none;">แสดงทั้งหมด</button>
-      <button id="btnReselect" class="btn-reselect" onclick="reselectWords()" style="display: none;">ปรับเลือกคำใหม่</button>
-      <button class="btn-clear" onclick="resetAll()">พิมพ์ข้อความใหม่</button>
+      <div id="inputSection">
+        <textarea id="inputText" placeholder="พิมพ์ หรือ เลือกบทสวดจากหมวดด้านซ้ายมือ..."></textarea>
+        <div class="btn-group">
+          <button class="btn-main" onclick="loadText()">นำเข้าข้อความเพื่อซ้อมท่อง</button>
+        </div>
+      </div>
+
+      <div id="practiceSection" style="display: none;">
+        <div class="font-control-bar">
+          <span class="instructions" id="statusTip">💡 แตะเลือกคำ หรือกดปุ่ม "สุ่มซ่อน 20%"</span>
+          <div>
+            <button class="btn-font" onclick="changeFontSize(-2)">A-</button>
+            <button class="btn-font" onclick="changeFontSize(2)">A+</button>
+          </div>
+        </div>
+
+        <div id="displayArea"></div>
+
+        <div class="btn-group">
+          <button id="btnRandom" class="btn-random" onclick="randomBlur20()">🎲 สุ่มซ่อน 20%</button>
+          <button id="btnConfirm" class="btn-confirm" onclick="confirmBlur()">ตกลง (เริ่มบังคำ)</button>
+          <button id="btnToggle" class="btn-toggle" onclick="toggleAll()" style="display: none;">แสดงทั้งหมด</button>
+          <button id="btnReselect" class="btn-reselect" onclick="reselectWords()" style="display: none;">ปรับเลือกคำใหม่</button>
+          <button class="btn-clear" onclick="resetAll()">เลือกบทสวดใหม่</button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
 <script>
+  // ตัวอย่างคลังข้อมูลตัวอย่างสำหรับหมวดต่างๆ
+  // เนื้อหาทั้งหมดตอนนี้อยู่ในไฟล์ content-template.json แยกต่างหาก
+  // (ต้องวางไฟล์ .json ไว้โฟลเดอร์เดียวกับ .html นี้ และเปิดผ่านเว็บเซิร์ฟเวอร์ ไม่ใช่เปิดไฟล์ตรงๆ
+  //  เพราะเบราว์เซอร์ส่วนใหญ่ (โดยเฉพาะ Chrome) จะบล็อก fetch() ไฟล์ในเครื่องด้วยเหตุผลด้าน CORS
+  //  วิธีเปิดง่ายๆ: เปิด terminal ในโฟลเดอร์นี้แล้วรัน  python3 -m http.server
+  //  แล้วเข้า http://localhost:8000/pali-blur-memorizer.html จากเบราว์เซอร์)
+  let PRESET_DATA = {};
+  let presetDataLoaded = false;
+
+  // ทำให้เมนูที่มีเนื้อหาจาก JSON (ไม่ใช่ "พิมพ์ข้อความเอง") จางลงและกดไม่ได้ชั่วคราว
+  // ระหว่างรอโหลดไฟล์ กันคนกดแล้วเจอข้อความว่างเปล่า
+  document.querySelectorAll('.sidebar details .menu-item').forEach(el => {
+    el.classList.add('menu-loading');
+  });
+
+  fetch('content-template.json')
+    .then(response => {
+      if (!response.ok) throw new Error('โหลดไฟล์ไม่สำเร็จ: ' + response.status);
+      return response.json();
+    })
+    .then(data => {
+      data.categories.forEach(category => {
+        category.items.forEach(item => {
+          if (item.vaggas) {
+            item.vaggas.forEach(vagga => {
+              PRESET_DATA[vagga.id] = vagga.content;
+            });
+          } else {
+            PRESET_DATA[item.id] = item.content;
+          }
+        });
+      });
+      presetDataLoaded = true;
+      document.querySelectorAll('.sidebar details .menu-item').forEach(el => {
+        el.classList.remove('menu-loading');
+      });
+    })
+    .catch(err => {
+      console.error('โหลด content-template.json ไม่สำเร็จ:', err);
+      document.getElementById('statusTip').innerText =
+        '⚠️ โหลดเนื้อหาไม่สำเร็จ (เช็คว่าเปิดผ่านเว็บเซิร์ฟเวอร์ ไม่ใช่เปิดไฟล์ตรงๆ) — ยังพิมพ์ข้อความเองได้ตามปกติ';
+      // ปลดล็อกเมนูแม้โหลดพลาด อย่างน้อยยังกดเข้าไปเห็นข้อความ placeholder ได้ ไม่ค้างเป็นปุ่มตายเฉยๆ
+      document.querySelectorAll('.sidebar details .menu-item').forEach(el => {
+        el.classList.remove('menu-loading');
+      });
+    });
+
   let isPracticeMode = false;
   let isAllRevealed = false;
   let currentFontSize = 18;
 
-  function loadText() {
-    const text = document.getElementById('inputText').value.trim();
-    if (!text) return alert('กรุณาใส่ข้อความก่อนครับ');
+  // จำสถานะ "เปิด/ปิด" เดิมของแต่ละหมวดไว้ตั้งแต่แรกโหลด เพื่อคืนค่าตอนล้างคำค้นหา
+  document.querySelectorAll('.sidebar details').forEach(d => {
+    d.dataset.defaultOpen = d.open ? '1' : '0';
+  });
 
-    const displayArea = document.getElementById('displayArea');
-    displayArea.innerHTML = '';
+  // ผูก event แค่ครั้งเดียวที่กล่องแม่ (event delegation) แทนการผูกทีละคำ
+  // เดิมโค้ดสร้างฟังก์ชัน onclick แยกให้ทุกคำ ถ้าเนื้อหายาวเป็นพันคำจะช้าตอนโหลด
+  // และกินหน่วยความจำโดยไม่จำเป็น เปลี่ยนมาเช็คจากจุดที่คลิกแทน
+  document.getElementById('displayArea').addEventListener('click', function (e) {
+    const span = e.target.closest('.word');
+    if (span) handleWordClick(span);
+  });
 
-    const lines = text.split('\n');
-    lines.forEach((line, lineIdx) => {
-      const words = line.split(' ');
-      words.forEach(word => {
-        if (word !== '') {
-          const span = document.createElement('span');
-          span.className = 'word';
-          span.innerText = word;
-          span.onclick = () => handleWordClick(span);
-          displayArea.appendChild(span);
-        }
+  function loadPreset(key, element) {
+    setActiveMenu(element);
+    resetAll();
+    const defaultText = PRESET_DATA[key] || `บทสวดหมวด [${element.innerText}] (สามารถพิมพ์หรือคัดลอกบาลีฉบับเต็มมาวางใส่แทนตรงนี้ได้)`;
+    document.getElementById('inputText').value = defaultText;
+    loadText();
+  }
+
+  function selectCustom(element) {
+    setActiveMenu(element);
+    resetAll();
+  }
+
+  function setActiveMenu(element) {
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+  }
+
+  // ระบบค้นหาเมนูใน Sidebar — เปิดหมวดที่เจอผลลัพธ์ให้อัตโนมัติ และซ่อนหมวดที่ไม่เจอเลย
+  function filterMenu(query) {
+    const filter = query.trim().toLowerCase();
+    const detailsList = document.querySelectorAll('.sidebar details');
+
+    detailsList.forEach(details => {
+      const items = details.querySelectorAll('.menu-item');
+      let hasMatch = false;
+
+      items.forEach(item => {
+        const matches = filter === '' || item.innerText.toLowerCase().includes(filter);
+        item.style.display = matches ? 'block' : 'none';
+        if (matches) hasMatch = true;
       });
-      if (lineIdx < lines.length - 1) {
-        displayArea.appendChild(document.createElement('br'));
+
+      if (filter === '') {
+        details.open = details.dataset.defaultOpen === '1';
+        details.classList.remove('no-match');
+      } else {
+        details.open = hasMatch;
+        details.classList.toggle('no-match', !hasMatch);
+      }
+    });
+  }
+
+  function loadText() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) return alert('กรุณาเลือกบทสวดหรือใส่ข้อความก่อนครับ');
+
+  const displayArea = document.getElementById('displayArea');
+  displayArea.innerHTML = '';
+
+  const fragment = document.createDocumentFragment();
+
+  // 1. แปลง <br> และ <br/> ให้เป็น \n ก่อนเพื่อจัดฟอร์แมตให้เป็นมาตรฐานเดียวกัน
+  const normalizedText = text.replace(/<br\s*[\/]?>/gi, '\n');
+
+  // 2. แยกตามบรรทัด \n
+  const lines = normalizedText.split('\n');
+
+  lines.forEach((line, lineIdx) => {
+    // แยกตามช่องว่าง เพื่อสร้างองค์ประกอบ word
+    const words = line.split(/\s+/);
+    words.forEach(word => {
+      if (word !== '') {
+        const span = document.createElement('span');
+        span.className = 'word';
+        span.textContent = word;
+        fragment.appendChild(span);
       }
     });
 
-    document.getElementById('inputSection').style.display = 'none';
-    document.getElementById('practiceSection').style.display = 'block';
-    
-    document.getElementById('btnConfirm').style.display = 'inline-block';
-    document.getElementById('btnToggle').style.display = 'none';
-    document.getElementById('btnReselect').style.display = 'none';
-    document.getElementById('statusTip').innerText = '💡 แตะเลือกคำที่ต้องการบัง แล้วกด "ตกลง"';
-    isPracticeMode = false;
-    
-    currentFontSize = 18;
-    displayArea.style.fontSize = currentFontSize + 'px';
-  }
+    // หากไม่ใช่บรรทัดสุดท้าย ให้เพิ่มแท็ก <br>
+    if (lineIdx < lines.length - 1) {
+      fragment.appendChild(document.createElement('br'));
+    }
+  });
+
+  displayArea.appendChild(fragment);
+
+  document.getElementById('inputSection').style.display = 'none';
+  document.getElementById('practiceSection').style.display = 'block';
+
+  document.getElementById('btnRandom').style.display = 'inline-block';
+  document.getElementById('btnConfirm').style.display = 'inline-block';
+  document.getElementById('btnToggle').style.display = 'none';
+  document.getElementById('btnReselect').style.display = 'none';
+  document.getElementById('statusTip').innerText = '💡 แตะเลือกคำ หรือกดปุ่ม "สุ่มซ่อน 20%"';
+  isPracticeMode = false;
+
+  currentFontSize = 18;
+  displayArea.style.fontSize = currentFontSize + 'px';
+}
 
   function changeFontSize(delta) {
     currentFontSize = Math.max(14, Math.min(32, currentFontSize + delta));
@@ -226,11 +595,63 @@
     }
   }
 
+  function randomBlur20() {
+    const allWords = Array.from(document.querySelectorAll('.word'));
+    if (allWords.length === 0) return;
+
+    let candidateIndices = [];
+    allWords.forEach((span, i) => {
+      const isTaken = span.classList.contains('mark-blur') || span.classList.contains('is-blurred');
+      const prevTaken = i > 0 && (allWords[i-1].classList.contains('mark-blur') || allWords[i-1].classList.contains('is-blurred'));
+      const nextTaken = i < allWords.length - 1 && (allWords[i+1].classList.contains('mark-blur') || allWords[i+1].classList.contains('is-blurred'));
+
+      if (!isTaken && !prevTaken && !nextTaken) {
+        candidateIndices.push(i);
+      }
+    });
+
+    if (candidateIndices.length === 0) {
+      allWords.forEach((span, i) => {
+        const isTaken = span.classList.contains('mark-blur') || span.classList.contains('is-blurred');
+        if (!isTaken) candidateIndices.push(i);
+      });
+    }
+
+    if (candidateIndices.length === 0) return alert('ซ่อนคำครบทั้งหมดแล้วครับ');
+
+    for (let i = candidateIndices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidateIndices[i], candidateIndices[j]] = [candidateIndices[j], candidateIndices[i]];
+    }
+
+    const targetCount = Math.max(1, Math.round(allWords.length * 0.20));
+    let addedCount = 0;
+
+    for (let idx of candidateIndices) {
+      if (addedCount >= targetCount) break;
+      const prevTaken = idx > 0 && (allWords[idx-1].classList.contains('mark-blur') || allWords[idx-1].classList.contains('is-blurred'));
+      const nextTaken = idx < allWords.length - 1 && (allWords[idx+1].classList.contains('mark-blur') || allWords[idx+1].classList.contains('is-blurred'));
+
+      if (!prevTaken && !nextTaken) {
+        if (isPracticeMode) {
+          allWords[idx].classList.add('is-blurred');
+        } else {
+          allWords[idx].classList.add('mark-blur');
+        }
+        addedCount++;
+      }
+    }
+
+    if (addedCount === 0 && candidateIndices.length > 0) {
+      let idx = candidateIndices[0];
+      if (isPracticeMode) allWords[idx].classList.add('is-blurred');
+      else allWords[idx].classList.add('mark-blur');
+    }
+  }
+
   function confirmBlur() {
     const markedWords = document.querySelectorAll('.mark-blur');
-    if (markedWords.length === 0) {
-      return alert('กรุณาแตะเลือกคำที่ต้องการบังอย่างน้อย 1 คำครับ');
-    }
+    if (markedWords.length === 0) return alert('กรุณาเลือกคำ หรือกดปุ่ม "สุ่มซ่อน 20%" ก่อนครับ');
 
     markedWords.forEach(span => {
       span.classList.remove('mark-blur');
@@ -239,12 +660,12 @@
 
     isPracticeMode = true;
     isAllRevealed = false;
-    
+
     document.getElementById('btnConfirm').style.display = 'none';
     document.getElementById('btnToggle').style.display = 'inline-block';
     document.getElementById('btnReselect').style.display = 'inline-block';
     document.getElementById('btnToggle').innerText = 'แสดงทั้งหมด';
-    document.getElementById('statusTip').innerText = '💡 แตะที่แถบสีทึบเพื่อเปิดดูเฉลยเฉพาะคำได้';
+    document.getElementById('statusTip').innerText = '💡 แตะที่แถบสีทึบเพื่อเปิดดูเฉลย หรือกดปุ่มสุ่มซ่อนเพิ่มได้';
   }
 
   function reselectWords() {
@@ -262,7 +683,7 @@
     document.getElementById('btnConfirm').style.display = 'inline-block';
     document.getElementById('btnToggle').style.display = 'none';
     document.getElementById('btnReselect').style.display = 'none';
-    document.getElementById('statusTip').innerText = '💡 แตะเพื่อเลือกหรือยกเลิกคำที่ต้องการบัง แล้วกด "ตกลง"';
+    document.getElementById('statusTip').innerText = '💡 แตะเพื่อปรับคำที่ต้องการบัง หรือกดปุ่ม "สุ่มซ่อน 20%"';
   }
 
   function toggleAll() {
