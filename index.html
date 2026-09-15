@@ -387,16 +387,21 @@
       <div class="menu-list">
         <div class="menu-item" onclick="loadPreset('bni_1', this)">นิทานุทฺเทโส</div>
         <div class="menu-item" onclick="loadPreset('bni_2', this)">ปาราชิกุทฺเทโส</div>
-        <div class="menu-item" onclick="loadPreset('bni_3', this)">สงฺฆาทิเสสุทฺเทโส</div>
+        <div class="menu-group" id="bni_3_group">
+          <div class="menu-header">สงฺฆาทิเสสุทฺเทโส</div>
+          <div class="menu-item" onclick="loadPreset('bni_3_pathamapattika', this)">๑. นว ปฐมาปตฺติกา</div>
+          <div class="menu-item" onclick="loadPreset('bni_3_yavatatiyaka', this)">๒. อฏฺฐ ยาวตติยกา</div>
+        </div>
+        
 
         <details>
           <summary>นิสฺสคฺคิยปาจิตฺติยา (๓ วรรค)</summary>
           <div class="menu-list">
-            <div class="menu-item" onclick="loadPreset('bni_4_patta1', this)">๑. ปัตตวรรค</div>
+            <div class="menu-item" onclick="loadPreset('bni_4_patta', this)">๑. ปัตตวรรค</div>
             <div class="menu-item" onclick="loadPreset('bni_4_civara', this)">๒. จีวรวรรค</div>
-            <div class="menu-item" onclick="loadPreset('bni_4_patta2', this)">๓. ปัตตวรรค (ตติยปัตตวรรค)</div>
+            <div class="menu-item" onclick="loadPreset('bni_4_patta_3', this)">๓. ปัตตวรรค (ตติยปัตตวรรค)</div>
           </div>
-        </details>
+          </details>
 
         <details>
           <summary>สุทฺธปาจิตฺติยา (๑๖ วรรค)</summary>
@@ -503,17 +508,15 @@
           <button id="btnConfirm" class="btn-confirm" onclick="confirmBlur()">ตกลง (เริ่มบังคำ)</button>
           <button id="btnToggle" class="btn-toggle" onclick="toggleAll()" style="display: none;">แสดงทั้งหมด</button>
           <button id="btnReselect" class="btn-reselect" onclick="reselectWords()" style="display: none;">ปรับเลือกคำใหม่</button>
-          <button class="btn-clear" onclick="resetAll()">เลือกบทสวดใหม่</button>
+          <button class="btn-clear" onclick="resetAll()">เลือกบทใหม่</button>
         </div>
       </div>
 
     </div>
   </div>
 </div>
-
 <script>
-  // ตัวอย่างคลังข้อมูลตัวอย่างสำหรับหมวดต่างๆ
-  // เนื้อหาทั้งหมดตอนนี้อยู่ในไฟล์ content-template.json แยกต่างหาก
+  // เนื้อหาทั้งหมดอยู่ในไฟล์ content-template.json แยกต่างหาก
   // (ต้องวางไฟล์ .json ไว้โฟลเดอร์เดียวกับ .html นี้ และเปิดผ่านเว็บเซิร์ฟเวอร์ ไม่ใช่เปิดไฟล์ตรงๆ
   //  เพราะเบราว์เซอร์ส่วนใหญ่ (โดยเฉพาะ Chrome) จะบล็อก fetch() ไฟล์ในเครื่องด้วยเหตุผลด้าน CORS
   //  วิธีเปิดง่ายๆ: เปิด terminal ในโฟลเดอร์นี้แล้วรัน  python3 -m http.server
@@ -522,8 +525,8 @@
   let presetDataLoaded = false;
 
   // ทำให้เมนูที่มีเนื้อหาจาก JSON (ไม่ใช่ "พิมพ์ข้อความเอง") จางลงและกดไม่ได้ชั่วคราว
-  // ระหว่างรอโหลดไฟล์ กันคนกดแล้วเจอข้อความว่างเปล่า
-  document.querySelectorAll('.sidebar details .menu-item').forEach(el => {
+  // ระหว่างรอโหลดไฟล์ กันคนกดแล้วเจอข้อความว่างเปล่า (ครอบคลุมทั้ง .menu-item ใน <details> และในกลุ่ม .menu-group)
+  document.querySelectorAll('.sidebar details .menu-item, .sidebar .menu-group .menu-item').forEach(el => {
     el.classList.add('menu-loading');
   });
 
@@ -545,7 +548,7 @@
         });
       });
       presetDataLoaded = true;
-      document.querySelectorAll('.sidebar details .menu-item').forEach(el => {
+      document.querySelectorAll('.sidebar details .menu-item, .sidebar .menu-group .menu-item').forEach(el => {
         el.classList.remove('menu-loading');
       });
     })
@@ -554,7 +557,7 @@
       document.getElementById('statusTip').innerText =
         '⚠️ โหลดเนื้อหาไม่สำเร็จ (เช็คว่าเปิดผ่านเว็บเซิร์ฟเวอร์ ไม่ใช่เปิดไฟล์ตรงๆ) — ยังพิมพ์ข้อความเองได้ตามปกติ';
       // ปลดล็อกเมนูแม้โหลดพลาด อย่างน้อยยังกดเข้าไปเห็นข้อความ placeholder ได้ ไม่ค้างเป็นปุ่มตายเฉยๆ
-      document.querySelectorAll('.sidebar details .menu-item').forEach(el => {
+      document.querySelectorAll('.sidebar details .menu-item, .sidebar .menu-group .menu-item').forEach(el => {
         el.classList.remove('menu-loading');
       });
     });
@@ -562,6 +565,8 @@
   let isPracticeMode = false;
   let isAllRevealed = false;
   let isSidebarHidden = false;
+  let currentFontSize = 18;
+  let blurPressCount = 0; // นับจำนวนครั้งที่กด "สุ่มซ่อน" เพื่อคำนวณเป้าหมายสะสม (กด 5 ครั้ง = ซ่อนครบ 100%)
 
   // ฟังก์ชันสลับแถบเมนู
   function toggleSidebar() {
@@ -569,12 +574,11 @@
     const appShell = document.querySelector('.app-shell');
     const toggleBtn = document.querySelector('.toggle-sidebar-btn');
     isSidebarHidden = !isSidebarHidden;
-    
+
     sidebar.classList.toggle('hidden');
     appShell.classList.toggle('sidebar-hidden');
     toggleBtn.classList.toggle('floating');
-    
-    // เก็บสถานะลงใน localStorage
+
     localStorage.setItem('sidebarHidden', isSidebarHidden);
   }
 
@@ -590,7 +594,6 @@
       toggleBtn.classList.add('floating');
     }
   });
-  let currentFontSize = 18;
 
   // จำสถานะ "เปิด/ปิด" เดิมของแต่ละหมวดไว้ตั้งแต่แรกโหลด เพื่อคืนค่าตอนล้างคำค้นหา
   document.querySelectorAll('.sidebar details').forEach(d => {
@@ -598,8 +601,6 @@
   });
 
   // ผูก event แค่ครั้งเดียวที่กล่องแม่ (event delegation) แทนการผูกทีละคำ
-  // เดิมโค้ดสร้างฟังก์ชัน onclick แยกให้ทุกคำ ถ้าเนื้อหายาวเป็นพันคำจะช้าตอนโหลด
-  // และกินหน่วยความจำโดยไม่จำเป็น เปลี่ยนมาเช็คจากจุดที่คลิกแทน
   document.getElementById('displayArea').addEventListener('click', function (e) {
     const span = e.target.closest('.word');
     if (span) handleWordClick(span);
@@ -624,9 +625,11 @@
   }
 
   // ระบบค้นหาเมนูใน Sidebar — เปิดหมวดที่เจอผลลัพธ์ให้อัตโนมัติ และซ่อนหมวดที่ไม่เจอเลย
+  // รองรับทั้งหมวดแบบ accordion (<details>) และกลุ่มย่อยแบบไม่มี accordion (.menu-group เช่น สังฆาทิเสสของภิกษุณี)
   function filterMenu(query) {
     const filter = query.trim().toLowerCase();
     const detailsList = document.querySelectorAll('.sidebar details');
+    const groupList = document.querySelectorAll('.sidebar .menu-group');
 
     detailsList.forEach(details => {
       const items = details.querySelectorAll('.menu-item');
@@ -646,56 +649,65 @@
         details.classList.toggle('no-match', !hasMatch);
       }
     });
+
+    groupList.forEach(group => {
+      const items = group.querySelectorAll('.menu-item');
+      let hasMatch = false;
+      items.forEach(item => {
+        const matches = filter === '' || item.innerText.toLowerCase().includes(filter);
+        item.style.display = matches ? 'block' : 'none';
+        if (matches) hasMatch = true;
+      });
+      group.classList.toggle('no-match', filter !== '' && !hasMatch);
+    });
   }
 
   function loadText() {
-  const text = document.getElementById('inputText').value.trim();
-  if (!text) return alert('กรุณาเลือกบทสวดหรือใส่ข้อความก่อนครับ');
+    const text = document.getElementById('inputText').value.trim();
+    if (!text) return alert('กรุณาเลือกบทสวดหรือใส่ข้อความก่อนครับ');
 
-  const displayArea = document.getElementById('displayArea');
-  displayArea.innerHTML = '';
+    const displayArea = document.getElementById('displayArea');
+    displayArea.innerHTML = '';
 
-  const fragment = document.createDocumentFragment();
+    const fragment = document.createDocumentFragment();
 
-  // 1. แปลง <br> และ <br/> ให้เป็น \n ก่อนเพื่อจัดฟอร์แมตให้เป็นมาตรฐานเดียวกัน
-  const normalizedText = text.replace(/<br\s*[\/]?>/gi, '\n');
+    // แปลง <br> และ <br/> ให้เป็น \n ก่อนเพื่อจัดฟอร์แมตให้เป็นมาตรฐานเดียวกัน
+    const normalizedText = text.replace(/<br\s*[\/]?>/gi, '\n');
+    const lines = normalizedText.split('\n');
 
-  // 2. แยกตามบรรทัด \n
-  const lines = normalizedText.split('\n');
+    lines.forEach((line, lineIdx) => {
+      // แยกตามช่องว่าง (รองรับช่องว่างติดกันหลายตัว) เพื่อสร้างองค์ประกอบ word
+      const words = line.split(/\s+/);
+      words.forEach(word => {
+        if (word !== '') {
+          const span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = word;
+          fragment.appendChild(span);
+        }
+      });
 
-  lines.forEach((line, lineIdx) => {
-    // แยกตามช่องว่าง เพื่อสร้างองค์ประกอบ word
-    const words = line.split(/\s+/);
-    words.forEach(word => {
-      if (word !== '') {
-        const span = document.createElement('span');
-        span.className = 'word';
-        span.textContent = word;
-        fragment.appendChild(span);
+      if (lineIdx < lines.length - 1) {
+        fragment.appendChild(document.createElement('br'));
       }
     });
 
-    // หากไม่ใช่บรรทัดสุดท้าย ให้เพิ่มแท็ก <br>
-    if (lineIdx < lines.length - 1) {
-      fragment.appendChild(document.createElement('br'));
-    }
-  });
+    displayArea.appendChild(fragment);
 
-  displayArea.appendChild(fragment);
+    document.getElementById('inputSection').style.display = 'none';
+    document.getElementById('practiceSection').style.display = 'block';
 
-  document.getElementById('inputSection').style.display = 'none';
-  document.getElementById('practiceSection').style.display = 'block';
+    document.getElementById('btnRandom').style.display = 'inline-block';
+    document.getElementById('btnConfirm').style.display = 'inline-block';
+    document.getElementById('btnToggle').style.display = 'none';
+    document.getElementById('btnReselect').style.display = 'none';
+    document.getElementById('statusTip').innerText = '💡 แตะเลือกคำ หรือกดปุ่ม "สุ่มซ่อน"';
+    isPracticeMode = false;
+    blurPressCount = 0;
 
-  document.getElementById('btnRandom').style.display = 'inline-block';
-  document.getElementById('btnConfirm').style.display = 'inline-block';
-  document.getElementById('btnToggle').style.display = 'none';
-  document.getElementById('btnReselect').style.display = 'none';
-  document.getElementById('statusTip').innerText = '💡 แตะเลือกคำ หรือกดปุ่ม "สุ่มซ่อน 20%"';
-  isPracticeMode = false;
-
-  currentFontSize = 18;
-  displayArea.style.fontSize = currentFontSize + 'px';
-}
+    currentFontSize = 18;
+    displayArea.style.fontSize = currentFontSize + 'px';
+  }
 
   function changeFontSize(delta) {
     currentFontSize = Math.max(14, Math.min(32, currentFontSize + delta));
@@ -716,59 +728,63 @@
     const allWords = Array.from(document.querySelectorAll('.word'));
     if (allWords.length === 0) return;
 
-    let candidateIndices = [];
-    allWords.forEach((span, i) => {
-      const isTaken = span.classList.contains('mark-blur') || span.classList.contains('is-blurred');
-      const prevTaken = i > 0 && (allWords[i-1].classList.contains('mark-blur') || allWords[i-1].classList.contains('is-blurred'));
-      const nextTaken = i < allWords.length - 1 && (allWords[i+1].classList.contains('mark-blur') || allWords[i+1].classList.contains('is-blurred'));
+    // นับจำนวนครั้งที่กด (สูงสุด 5) แล้วคำนวณเป้าหมายสะสมจากจำนวนครั้งนั้น
+    // กดครั้งที่ 1 = 20%, ครั้งที่ 2 = 40%, ... ครั้งที่ 5 = 100% พอดี (ไม่ปัดเศษแยกทีละรอบ ซึ่งจะสะสมความคลาดเคลื่อน)
+    blurPressCount = Math.min(blurPressCount + 1, 5);
+    const targetCount = blurPressCount >= 5
+      ? allWords.length
+      : Math.round(allWords.length * (blurPressCount * 0.20));
 
-      if (!isTaken && !prevTaken && !nextTaken) {
-        candidateIndices.push(i);
-      }
+    const isTaken = (i) => allWords[i].classList.contains('mark-blur') || allWords[i].classList.contains('is-blurred');
+    const alreadyCount = allWords.reduce((sum, _, i) => sum + (isTaken(i) ? 1 : 0), 0);
+    const needed = targetCount - alreadyCount;
+    if (needed <= 0) return; // ถึงเป้าหมายของรอบนี้แล้ว (อาจเพราะเลือกคำเองไว้ก่อนหน้า)
+
+    // แยกผู้สมัครเป็น 2 กลุ่ม: กลุ่มที่ไม่ติดกับคำที่ถูกซ่อนอยู่แล้ว (ให้ความสำคัญก่อน เพื่อให้กระจายตัวสวยงาม)
+    // และกลุ่มที่เหลือทั้งหมด (ใช้เติมตอนกลุ่มแรกไม่พอ ซึ่งจะเกิดขึ้นแน่นอนตอนเป้าหมาย 100%)
+    const spaced = [];
+    const any = [];
+    allWords.forEach((span, i) => {
+      if (isTaken(i)) return;
+      any.push(i);
+      const prevTaken = i > 0 && isTaken(i - 1);
+      const nextTaken = i < allWords.length - 1 && isTaken(i + 1);
+      if (!prevTaken && !nextTaken) spaced.push(i);
     });
 
-    if (candidateIndices.length === 0) {
-      allWords.forEach((span, i) => {
-        const isTaken = span.classList.contains('mark-blur') || span.classList.contains('is-blurred');
-        if (!isTaken) candidateIndices.push(i);
-      });
+    const shuffle = (arr) => {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+    shuffle(spaced);
+    shuffle(any);
+
+    const chosen = new Set();
+    for (const idx of spaced) {
+      if (chosen.size >= needed) break;
+      const prevTaken = idx > 0 && (isTaken(idx - 1) || chosen.has(idx - 1));
+      const nextTaken = idx < allWords.length - 1 && (isTaken(idx + 1) || chosen.has(idx + 1));
+      if (!prevTaken && !nextTaken) chosen.add(idx);
     }
-
-    if (candidateIndices.length === 0) return alert('ซ่อนคำครบทั้งหมดแล้วครับ');
-
-    for (let i = candidateIndices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [candidateIndices[i], candidateIndices[j]] = [candidateIndices[j], candidateIndices[i]];
-    }
-
-    const targetCount = Math.max(1, Math.round(allWords.length * 0.20));
-    let addedCount = 0;
-
-    for (let idx of candidateIndices) {
-      if (addedCount >= targetCount) break;
-      const prevTaken = idx > 0 && (allWords[idx-1].classList.contains('mark-blur') || allWords[idx-1].classList.contains('is-blurred'));
-      const nextTaken = idx < allWords.length - 1 && (allWords[idx+1].classList.contains('mark-blur') || allWords[idx+1].classList.contains('is-blurred'));
-
-      if (!prevTaken && !nextTaken) {
-        if (isPracticeMode) {
-          allWords[idx].classList.add('is-blurred');
-        } else {
-          allWords[idx].classList.add('mark-blur');
-        }
-        addedCount++;
+    if (chosen.size < needed) {
+      for (const idx of any) {
+        if (chosen.size >= needed) break;
+        chosen.add(idx);
       }
     }
 
-    if (addedCount === 0 && candidateIndices.length > 0) {
-      let idx = candidateIndices[0];
+    chosen.forEach(idx => {
       if (isPracticeMode) allWords[idx].classList.add('is-blurred');
       else allWords[idx].classList.add('mark-blur');
-    }
+    });
   }
 
   function confirmBlur() {
     const markedWords = document.querySelectorAll('.mark-blur');
-    if (markedWords.length === 0) return alert('กรุณาเลือกคำ หรือกดปุ่ม "สุ่มซ่อน 20%" ก่อนครับ');
+    if (markedWords.length === 0) return alert('กรุณาเลือกคำ หรือกดปุ่ม "สุ่มซ่อน" ก่อนครับ');
 
     markedWords.forEach(span => {
       span.classList.remove('mark-blur');
@@ -800,7 +816,7 @@
     document.getElementById('btnConfirm').style.display = 'inline-block';
     document.getElementById('btnToggle').style.display = 'none';
     document.getElementById('btnReselect').style.display = 'none';
-    document.getElementById('statusTip').innerText = '💡 แตะเพื่อปรับคำที่ต้องการบัง หรือกดปุ่ม "สุ่มซ่อน 20%"';
+    document.getElementById('statusTip').innerText = '💡 แตะเพื่อปรับคำที่ต้องการบัง หรือกดปุ่ม "สุ่มซ่อน"';
   }
 
   function toggleAll() {
@@ -825,6 +841,7 @@
     document.getElementById('practiceSection').style.display = 'none';
     isPracticeMode = false;
     isAllRevealed = false;
+    blurPressCount = 0;
   }
 </script>
 
