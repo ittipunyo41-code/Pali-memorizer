@@ -14,13 +14,6 @@
       color: #1c1c1e;
     }
 
-    /*
-      โครง "shell" ของแอป — ใช้ position:fixed + inset:0 แทนการตั้ง height:100vh บน body
-      เหตุผล: บนมือถือ ความสูง viewport (100vh) จะเปลี่ยนไปมาเวลาแถบ address bar ยืด/หด
-      ทำให้ layout ที่อิง vh คำนวณความสูงผิดพลาดเป็นระยะ ๆ (นี่คือต้นตอปัญหาที่แก้แบบแพตช์ก่อนหน้านี้)
-      การใช้ fixed + inset:0 ทำให้เบราว์เซอร์คำนวณพื้นที่จริงที่มองเห็นให้เอง เสถียรกว่า
-      และไม่ต้องพึ่ง body { overflow:hidden } เลย จึงไม่มีทางที่เนื้อหาจะ "ล้นแล้วถูกตัดจนเลื่อนไม่ได้"
-    */
     .app-shell {
       position: fixed;
       inset: 0;
@@ -28,7 +21,6 @@
       flex-direction: row;
     }
 
-    /* แถบเมนูด้านซ้าย เลื่อนได้อิสระในตัวเอง ไม่ต้องพึ่งความสูงของหน้าทั้งหมด */
     .sidebar {
       flex: 0 0 320px;
       min-width: 0;
@@ -51,7 +43,6 @@
       padding-left: 8px;
     }
 
-    /* ช่องค้นหาบทสวด */
     .search-box {
       width: 100%;
       padding: 8px 12px;
@@ -62,7 +53,6 @@
       outline: none;
     }
 
-    /* หมวดหมู่พับเก็บได้ (Accordion) */
     details {
       margin-bottom: 8px;
       border-radius: 10px;
@@ -102,7 +92,6 @@
     .menu-item.active { background-color: #007aff; color: white; }
     .menu-item.menu-loading { opacity: 0.4; pointer-events: none; }
 
-    /* พื้นที่แสดงผลหลัก เลื่อนได้อิสระของตัวเองเช่นกัน */
     .main-content {
       flex: 1 1 auto;
       min-width: 0;
@@ -181,6 +170,8 @@
     .btn-toggle { background-color: #5856d6; color: white; }
     .btn-reselect { background-color: #ff9500; color: white; }
     .btn-clear { background-color: #ff3b30; color: white; }
+    .btn-autoplay { background-color: #00b894; color: white; }
+    .btn-autostop { background-color: #636e72; color: white; }
 
     .font-control-bar {
       display: flex;
@@ -200,19 +191,45 @@
       font-size: 14px;
     }
 
-    #displayArea {
-  font-size: 18px;
-  line-height: 1.85;
-  margin-top: 10px;
-  padding: 20px;
-  background: #fafafa;
-  border: 1px solid #e5e5ea;
-  border-radius: 12px;
-  min-height: 120px;
-  word-wrap: break-word;
-  white-space: pre-wrap; /* เพิ่มบรรทัดนี้ลงไป */
-}
+    .autoplay-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding: 12px;
+      background: #f2f2f7;
+      border-radius: 10px;
+    }
+    .autoplay-bar label {
+      font-size: 13px;
+      color: #3a3a3c;
+      white-space: nowrap;
+    }
+    .autoplay-bar input[type="range"] {
+      flex: 1;
+      min-width: 100px;
+    }
+    #autoPlaySpeedLabel {
+      font-size: 13px;
+      font-weight: 600;
+      color: #007aff;
+      min-width: 60px;
+      text-align: right;
+    }
 
+    #displayArea {
+      font-size: 18px;
+      line-height: 1.85;
+      margin-top: 10px;
+      padding: 20px;
+      background: #fafafa;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      min-height: 120px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
 
     .word {
       cursor: pointer;
@@ -227,13 +244,12 @@
     .mark-blur { background-color: #ffe600; color: #000000; font-weight: 600; }
     .is-blurred { background-color: #3a3a3c; color: transparent; border-radius: 4px; }
     .is-blurred.revealed { background-color: #d1f2d9; color: #0f5132; font-weight: 600; }
+    .is-blurred.auto-current { box-shadow: 0 0 0 2px #00b894; }
 
     .instructions { font-size: 14px; color: #8e8e93; }
 
-    /* หมวดที่ไม่ตรงกับคำค้นหา จะถูกซ่อนไปเลย ไม่เหลือหัวข้อว่างๆ ให้สับสน */
     details.no-match { display: none; }
 
-    /* ปุ่มสลับซ่อน/แสดงแถบข้าง */
     .toggle-sidebar-btn {
       width: 36px;
       height: 36px;
@@ -258,7 +274,6 @@
       transform: scale(1.05);
     }
 
-    /* ปุ่มลอยเมื่อแถบซ่อน */
     .toggle-sidebar-btn.floating {
       position: fixed;
       top: 16px;
@@ -269,7 +284,6 @@
       font-size: 20px;
     }
 
-    /* สถานะซ่อนแถบด้านข้าง */
     .sidebar.hidden {
       flex: 0 0 0;
       width: 0;
@@ -279,7 +293,6 @@
       transition: all 0.3s ease;
     }
 
-    /* ปุ่มแสดงเมื่อแถบซ่อน */
     .app-shell.sidebar-hidden .toggle-sidebar-btn {
       position: fixed;
       top: 16px;
@@ -287,8 +300,6 @@
       z-index: 1000;
     }
 
-    /* จอแคบ (มือถือ): สลับเป็นเรียงบนลงล่าง แถบเมนูจำกัดความสูงและเลื่อนในตัวเอง
-       เนื้อหาหลักกินพื้นที่ที่เหลือและเลื่อนในตัวเองเช่นกัน ไม่มีส่วนไหนพึ่งพา vh อีกต่อไป */
     @media (max-width: 768px) {
       .app-shell { flex-direction: column; }
       .sidebar {
@@ -319,8 +330,7 @@
 <body>
 
 <div class="app-shell">
-  <!-- Sidebar พร้อมโครงสร้าง 3 หมวดหลัก -->
-    <div class="sidebar">
+  <div class="sidebar">
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
       <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="ซ่อน/แสดงเมนู">☰</button>
       <div class="sidebar-title" style="margin-bottom: 0; flex: 1;">🔒 ปาฏิโมกข์ & ธรรมบท</div>
@@ -329,7 +339,6 @@
 
 
 
-    <!-- 1. ภิกขุปาฏิโมกขปาฬิ -->
     <details open>
       <summary>🙏 ภิกขุปาฏิโมกขปาฬิ</summary>
       <div class="menu-list">
@@ -381,7 +390,6 @@
       </div>
     </details>
 
-    <!-- 2. ภิกขุณีปาฏิโมกขปาฬิ -->
     <details>
       <summary>🪷 ภิกขุณีปาฏิโมกขปาฬิ</summary>
       <div class="menu-list">
@@ -444,7 +452,6 @@
       </div>
     </details>
 
-    <!-- 3. ธมฺมปทปาฬิ ๒๖ วรรค -->
     <details>
       <summary>📖 ธรรมบท (๒๖ วรรค)</summary>
       <div class="menu-list">
@@ -479,7 +486,6 @@
   </div>
 
 
-  <!-- พื้นที่แสดงผลหลัก -->
   <div class="main-content">
     <div class="container">
 
@@ -510,22 +516,23 @@
           <button id="btnReselect" class="btn-reselect" onclick="reselectWords()" style="display: none;">ปรับเลือกคำใหม่</button>
           <button class="btn-clear" onclick="resetAll()">เลือกบทใหม่</button>
         </div>
+
+        <div class="autoplay-bar" id="autoplayBar" style="display: none;">
+          <button id="btnAutoPlay" class="btn-autoplay" style="flex: 0 0 auto; min-width: 150px;" onclick="toggleAutoPlay()">▶ ไล่คำอัตโนมัติ</button>
+          <button id="btnAutoStop" class="btn-autostop" style="flex: 0 0 auto; min-width: 90px;" onclick="stopAutoPlay()">■ หยุด</button>
+          <label for="autoPlaySpeed">⏱ ความเร็ว</label>
+          <input type="range" id="autoPlaySpeed" min="0.3" max="5" step="0.1" value="1.2" oninput="updateAutoPlaySpeedLabel()">
+          <span id="autoPlaySpeedLabel">1.2 วิ/คำ</span>
+        </div>
       </div>
 
     </div>
   </div>
 </div>
 <script>
-  // เนื้อหาทั้งหมดอยู่ในไฟล์ content-template.json แยกต่างหาก
-  // (ต้องวางไฟล์ .json ไว้โฟลเดอร์เดียวกับ .html นี้ และเปิดผ่านเว็บเซิร์ฟเวอร์ ไม่ใช่เปิดไฟล์ตรงๆ
-  //  เพราะเบราว์เซอร์ส่วนใหญ่ (โดยเฉพาะ Chrome) จะบล็อก fetch() ไฟล์ในเครื่องด้วยเหตุผลด้าน CORS
-  //  วิธีเปิดง่ายๆ: เปิด terminal ในโฟลเดอร์นี้แล้วรัน  python3 -m http.server
-  //  แล้วเข้า http://localhost:8000/pali-blur-memorizer.html จากเบราว์เซอร์)
   let PRESET_DATA = {};
   let presetDataLoaded = false;
 
-  // ทำให้เมนูที่มีเนื้อหาจาก JSON (ไม่ใช่ "พิมพ์ข้อความเอง") จางลงและกดไม่ได้ชั่วคราว
-  // ระหว่างรอโหลดไฟล์ กันคนกดแล้วเจอข้อความว่างเปล่า (ครอบคลุมทั้ง .menu-item ใน <details> และในกลุ่ม .menu-group)
   document.querySelectorAll('.sidebar details .menu-item, .sidebar .menu-group .menu-item').forEach(el => {
     el.classList.add('menu-loading');
   });
@@ -556,7 +563,6 @@
       console.error('โหลด content-template.json ไม่สำเร็จ:', err);
       document.getElementById('statusTip').innerText =
         '⚠️ โหลดเนื้อหาไม่สำเร็จ (เช็คว่าเปิดผ่านเว็บเซิร์ฟเวอร์ ไม่ใช่เปิดไฟล์ตรงๆ) — ยังพิมพ์ข้อความเองได้ตามปกติ';
-      // ปลดล็อกเมนูแม้โหลดพลาด อย่างน้อยยังกดเข้าไปเห็นข้อความ placeholder ได้ ไม่ค้างเป็นปุ่มตายเฉยๆ
       document.querySelectorAll('.sidebar details .menu-item, .sidebar .menu-group .menu-item').forEach(el => {
         el.classList.remove('menu-loading');
       });
@@ -566,9 +572,13 @@
   let isAllRevealed = false;
   let isSidebarHidden = false;
   let currentFontSize = 18;
-  let blurPressCount = 0; // นับจำนวนครั้งที่กด "สุ่มซ่อน" เพื่อคำนวณเป้าหมายสะสม (กด 5 ครั้ง = ซ่อนครบ 100%)
+  let blurPressCount = 0;
 
-  // ฟังก์ชันสลับแถบเมนู
+  // --- สถานะสำหรับโหมด "ไล่คำอัตโนมัติ" ---
+  let autoPlayTimer = null;      // ตัว setInterval ที่กำลังทำงานอยู่ (null = ไม่ได้เล่น)
+  let autoPlayList = [];         // รายการคำที่ถูกซ่อนไว้ ตามลำดับในเนื้อหา
+  let autoPlayIndex = 0;         // ตำแหน่งคำถัดไปที่จะเปิดเผย
+
   function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const appShell = document.querySelector('.app-shell');
@@ -582,7 +592,6 @@
     localStorage.setItem('sidebarHidden', isSidebarHidden);
   }
 
-  // โหลดสถานะแถบเมนูจากครั้งที่แล้ว
   window.addEventListener('load', () => {
     if (localStorage.getItem('sidebarHidden') === 'true') {
       const sidebar = document.querySelector('.sidebar');
@@ -595,12 +604,10 @@
     }
   });
 
-  // จำสถานะ "เปิด/ปิด" เดิมของแต่ละหมวดไว้ตั้งแต่แรกโหลด เพื่อคืนค่าตอนล้างคำค้นหา
   document.querySelectorAll('.sidebar details').forEach(d => {
     d.dataset.defaultOpen = d.open ? '1' : '0';
   });
 
-  // ผูก event แค่ครั้งเดียวที่กล่องแม่ (event delegation) แทนการผูกทีละคำ
   document.getElementById('displayArea').addEventListener('click', function (e) {
     const span = e.target.closest('.word');
     if (span) handleWordClick(span);
@@ -624,8 +631,6 @@
     element.classList.add('active');
   }
 
-  // ระบบค้นหาเมนูใน Sidebar — เปิดหมวดที่เจอผลลัพธ์ให้อัตโนมัติ และซ่อนหมวดที่ไม่เจอเลย
-  // รองรับทั้งหมวดแบบ accordion (<details>) และกลุ่มย่อยแบบไม่มี accordion (.menu-group เช่น สังฆาทิเสสของภิกษุณี)
   function filterMenu(query) {
     const filter = query.trim().toLowerCase();
     const detailsList = document.querySelectorAll('.sidebar details');
@@ -666,17 +671,17 @@
     const text = document.getElementById('inputText').value.trim();
     if (!text) return alert('กรุณาเลือกบทสวดหรือใส่ข้อความก่อนครับ');
 
+    stopAutoPlay();
+
     const displayArea = document.getElementById('displayArea');
     displayArea.innerHTML = '';
 
     const fragment = document.createDocumentFragment();
 
-    // แปลง <br> และ <br/> ให้เป็น \n ก่อนเพื่อจัดฟอร์แมตให้เป็นมาตรฐานเดียวกัน
     const normalizedText = text.replace(/<br\s*[\/]?>/gi, '\n');
     const lines = normalizedText.split('\n');
 
     lines.forEach((line, lineIdx) => {
-      // แยกตามช่องว่าง (รองรับช่องว่างติดกันหลายตัว) เพื่อสร้างองค์ประกอบ word
       const words = line.split(/\s+/);
       words.forEach(word => {
         if (word !== '') {
@@ -701,6 +706,7 @@
     document.getElementById('btnConfirm').style.display = 'inline-block';
     document.getElementById('btnToggle').style.display = 'none';
     document.getElementById('btnReselect').style.display = 'none';
+    document.getElementById('autoplayBar').style.display = 'none';
     document.getElementById('statusTip').innerText = '💡 แตะเลือกคำ หรือกดปุ่ม "สุ่มซ่อน"';
     isPracticeMode = false;
     blurPressCount = 0;
@@ -718,6 +724,8 @@
     if (!isPracticeMode) {
       span.classList.toggle('mark-blur');
     } else {
+      // ถ้ากำลังเล่นอัตโนมัติอยู่ ให้หยุดก่อน เพื่อไม่ให้ชนกับการแตะเปิดคำเอง
+      if (autoPlayTimer) stopAutoPlay();
       if (span.classList.contains('is-blurred')) {
         span.classList.toggle('revealed');
       }
@@ -728,8 +736,6 @@
     const allWords = Array.from(document.querySelectorAll('.word'));
     if (allWords.length === 0) return;
 
-    // นับจำนวนครั้งที่กด (สูงสุด 5) แล้วคำนวณเป้าหมายสะสมจากจำนวนครั้งนั้น
-    // กดครั้งที่ 1 = 20%, ครั้งที่ 2 = 40%, ... ครั้งที่ 5 = 100% พอดี (ไม่ปัดเศษแยกทีละรอบ ซึ่งจะสะสมความคลาดเคลื่อน)
     blurPressCount = Math.min(blurPressCount + 1, 5);
     const targetCount = blurPressCount >= 5
       ? allWords.length
@@ -738,10 +744,8 @@
     const isTaken = (i) => allWords[i].classList.contains('mark-blur') || allWords[i].classList.contains('is-blurred');
     const alreadyCount = allWords.reduce((sum, _, i) => sum + (isTaken(i) ? 1 : 0), 0);
     const needed = targetCount - alreadyCount;
-    if (needed <= 0) return; // ถึงเป้าหมายของรอบนี้แล้ว (อาจเพราะเลือกคำเองไว้ก่อนหน้า)
+    if (needed <= 0) return;
 
-    // แยกผู้สมัครเป็น 2 กลุ่ม: กลุ่มที่ไม่ติดกับคำที่ถูกซ่อนอยู่แล้ว (ให้ความสำคัญก่อน เพื่อให้กระจายตัวสวยงาม)
-    // และกลุ่มที่เหลือทั้งหมด (ใช้เติมตอนกลุ่มแรกไม่พอ ซึ่งจะเกิดขึ้นแน่นอนตอนเป้าหมาย 100%)
     const spaced = [];
     const any = [];
     allWords.forEach((span, i) => {
@@ -798,10 +802,13 @@
     document.getElementById('btnToggle').style.display = 'inline-block';
     document.getElementById('btnReselect').style.display = 'inline-block';
     document.getElementById('btnToggle').innerText = 'แสดงทั้งหมด';
-    document.getElementById('statusTip').innerText = '💡 แตะที่แถบสีทึบเพื่อเปิดดูเฉลย หรือกดปุ่มสุ่มซ่อนเพิ่มได้';
+    document.getElementById('autoplayBar').style.display = 'flex';
+    document.getElementById('statusTip').innerText = '💡 แตะที่แถบสีทึบเพื่อเปิดดูเฉลย หรือลองกด "ไล่คำอัตโนมัติ"';
   }
 
   function reselectWords() {
+    stopAutoPlay();
+
     const allWords = document.querySelectorAll('.word');
     allWords.forEach(span => {
       if (span.classList.contains('is-blurred')) {
@@ -816,10 +823,13 @@
     document.getElementById('btnConfirm').style.display = 'inline-block';
     document.getElementById('btnToggle').style.display = 'none';
     document.getElementById('btnReselect').style.display = 'none';
+    document.getElementById('autoplayBar').style.display = 'none';
     document.getElementById('statusTip').innerText = '💡 แตะเพื่อปรับคำที่ต้องการบัง หรือกดปุ่ม "สุ่มซ่อน"';
   }
 
   function toggleAll() {
+    stopAutoPlay();
+
     const blurredWords = document.querySelectorAll('.is-blurred');
     const toggleBtn = document.getElementById('btnToggle');
 
@@ -835,13 +845,103 @@
   }
 
   function resetAll() {
+    stopAutoPlay();
+
     document.getElementById('inputText').value = '';
     document.getElementById('displayArea').innerHTML = '';
     document.getElementById('inputSection').style.display = 'block';
     document.getElementById('practiceSection').style.display = 'none';
+    document.getElementById('autoplayBar').style.display = 'none';
     isPracticeMode = false;
     isAllRevealed = false;
     blurPressCount = 0;
+  }
+
+  // --- ฟังก์ชันไล่คำอัตโนมัติ ---
+
+  function updateAutoPlaySpeedLabel() {
+    const val = parseFloat(document.getElementById('autoPlaySpeed').value);
+    document.getElementById('autoPlaySpeedLabel').innerText = val.toFixed(1) + ' วิ/คำ';
+
+    // ถ้ากำลังเล่นอยู่ ให้รีสตาร์ท interval ด้วยความเร็วใหม่ทันที โดยไม่รีเซ็ตตำแหน่งที่ไล่ถึง
+    if (autoPlayTimer) {
+      clearInterval(autoPlayTimer);
+      autoPlayTimer = setInterval(runAutoPlayStep, val * 1000);
+    }
+  }
+
+  function toggleAutoPlay() {
+    if (autoPlayTimer) {
+      pauseAutoPlay();
+    } else {
+      startAutoPlay();
+    }
+  }
+
+  function startAutoPlay() {
+    // ถ้ายังไม่เคยเริ่ม หรือเล่นจบรอบไปแล้ว ให้สุ่มรายชื่อคำใหม่จากคำที่ถูกซ่อนอยู่ตอนนี้
+    if (autoPlayList.length === 0 || autoPlayIndex >= autoPlayList.length) {
+      autoPlayList = Array.from(document.querySelectorAll('.is-blurred'));
+      autoPlayIndex = 0;
+      autoPlayList.forEach(el => el.classList.remove('revealed', 'auto-current'));
+    }
+
+    if (autoPlayList.length === 0) {
+      alert('ยังไม่มีคำที่ถูกซ่อนไว้ กรุณากด "สุ่มซ่อน" หรือเลือกคำแล้วกด "ตกลง" ก่อนครับ');
+      return;
+    }
+
+    document.getElementById('btnAutoPlay').innerText = '⏸ หยุดชั่วคราว';
+    document.getElementById('statusTip').innerText = '▶️ กำลังไล่แสดงคำอัตโนมัติ...';
+
+    runAutoPlayStep();
+    const speed = parseFloat(document.getElementById('autoPlaySpeed').value) * 1000;
+    autoPlayTimer = setInterval(runAutoPlayStep, speed);
+  }
+
+  function runAutoPlayStep() {
+    // ปิดคำก่อนหน้ากลับเป็นแถบทึบ ก่อนเปิดคำถัดไป (โชว์ทีละคำ ไม่ค้างสะสม)
+    if (autoPlayIndex > 0) {
+      const prev = autoPlayList[autoPlayIndex - 1];
+      if (prev) {
+        prev.classList.remove('revealed');
+        prev.classList.remove('auto-current');
+      }
+    }
+
+    if (autoPlayIndex >= autoPlayList.length) {
+      pauseAutoPlay();
+      document.getElementById('btnAutoPlay').innerText = '▶ เล่นซ้ำ';
+      document.getElementById('statusTip').innerText = '✅ ไล่ครบทุกคำที่ซ่อนไว้แล้ว';
+      return;
+    }
+
+    const current = autoPlayList[autoPlayIndex];
+    current.classList.add('revealed');
+    current.classList.add('auto-current');
+    current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    autoPlayIndex++;
+  }
+
+  function pauseAutoPlay() {
+    if (autoPlayTimer) {
+      clearInterval(autoPlayTimer);
+      autoPlayTimer = null;
+    }
+    document.getElementById('btnAutoPlay').innerText = '▶ เล่นต่อ';
+    document.getElementById('statusTip').innerText = '⏸ หยุดไว้ชั่วคราว กดเล่นต่อได้เลย';
+  }
+
+  function stopAutoPlay() {
+    if (autoPlayTimer) {
+      clearInterval(autoPlayTimer);
+      autoPlayTimer = null;
+    }
+    autoPlayList.forEach(el => el.classList.remove('revealed', 'auto-current'));
+    autoPlayList = [];
+    autoPlayIndex = 0;
+    const btn = document.getElementById('btnAutoPlay');
+    if (btn) btn.innerText = '▶ ไล่คำอัตโนมัติ';
   }
 </script>
 
