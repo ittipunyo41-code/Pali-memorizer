@@ -337,8 +337,6 @@
     </div>
     <input type="text" class="search-box" placeholder="🔍 ค้นหาบทสวด/หัวข้อ..." onkeyup="filterMenu(this.value)">
 
-
-
     <details open>
       <summary>🙏 ภิกขุปาฏิโมกขปาฬิ</summary>
       <div class="menu-list">
@@ -401,7 +399,6 @@
           <div class="menu-item" onclick="loadPreset('bni_3_yavatatiyaka', this)">๒. อฏฺฐ ยาวตติยกา</div>
         </div>
         
-
         <details>
           <summary>นิสฺสคฺคิยปาจิตฺติยา (๓ วรรค)</summary>
           <div class="menu-list">
@@ -485,7 +482,6 @@
     </details>
   </div>
 
-
   <div class="main-content">
     <div class="container">
 
@@ -521,14 +517,15 @@
           <button id="btnAutoPlay" class="btn-autoplay" style="flex: 0 0 auto; min-width: 150px;" onclick="toggleAutoPlay()">▶ ไล่คำอัตโนมัติ</button>
           <button id="btnAutoStop" class="btn-autostop" style="flex: 0 0 auto; min-width: 90px;" onclick="stopAutoPlay()">■ หยุด</button>
           <label for="autoPlaySpeed">⏱ ความเร็ว</label>
-          <input type="range" id="autoPlaySpeed" min="0.3" max="5" step="0.1" value="1.2" oninput="updateAutoPlaySpeedLabel()">
-          <span id="autoPlaySpeedLabel">1.2 วิ/คำ</span>
+          <input type="range" id="autoPlaySpeed" min="0.3" max="5" step="0.1" value="1.0" oninput="updateAutoPlaySpeedLabel()">
+          <span id="autoPlaySpeedLabel">1.0x (ความเร็ว)</span>
         </div>
       </div>
 
     </div>
   </div>
 </div>
+
 <script>
   let PRESET_DATA = {};
   let presetDataLoaded = false;
@@ -575,9 +572,12 @@
   let blurPressCount = 0;
 
   // --- สถานะสำหรับโหมด "ไล่คำอัตโนมัติ" ---
-  let autoPlayTimer = null;      // ตัว setInterval ที่กำลังทำงานอยู่ (null = ไม่ได้เล่น)
+  let autoPlayTimer = null;      // เก็บ ID ของ setTimeout
   let autoPlayList = [];         // รายการคำที่ถูกซ่อนไว้ ตามลำดับในเนื้อหา
   let autoPlayIndex = 0;         // ตำแหน่งคำถัดไปที่จะเปิดเผย
+
+  const SEC_PER_CHAR = 0.15;     // เวลาต่อ 1 ตัวอักษร (วินาที)
+  const MIN_DELAY_SEC = 1.0;     // เวลาหน่วงขั้นต่ำ (วินาที)
 
   function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
@@ -724,7 +724,6 @@
     if (!isPracticeMode) {
       span.classList.toggle('mark-blur');
     } else {
-      // ถ้ากำลังเล่นอัตโนมัติอยู่ ให้หยุดก่อน เพื่อไม่ให้ชนกับการแตะเปิดคำเอง
       if (autoPlayTimer) stopAutoPlay();
       if (span.classList.contains('is-blurred')) {
         span.classList.toggle('revealed');
@@ -857,17 +856,11 @@
     blurPressCount = 0;
   }
 
-  // --- ฟังก์ชันไล่คำอัตโนมัติ ---
+  // --- ฟังก์ชันไล่คำอัตโนมัติ (นับตัวอักษรของข้อความก่อนหน้า) ---
 
   function updateAutoPlaySpeedLabel() {
     const val = parseFloat(document.getElementById('autoPlaySpeed').value);
-    document.getElementById('autoPlaySpeedLabel').innerText = val.toFixed(1) + ' วิ/คำ';
-
-    // ถ้ากำลังเล่นอยู่ ให้รีสตาร์ท interval ด้วยความเร็วใหม่ทันที โดยไม่รีเซ็ตตำแหน่งที่ไล่ถึง
-    if (autoPlayTimer) {
-      clearInterval(autoPlayTimer);
-      autoPlayTimer = setInterval(runAutoPlayStep, val * 1000);
-    }
+    document.getElementById('autoPlaySpeedLabel').innerText = val.toFixed(1) + 'x (ความเร็ว)';
   }
 
   function toggleAutoPlay() {
@@ -879,7 +872,6 @@
   }
 
   function startAutoPlay() {
-    // ถ้ายังไม่เคยเริ่ม หรือเล่นจบรอบไปแล้ว ให้สุ่มรายชื่อคำใหม่จากคำที่ถูกซ่อนอยู่ตอนนี้
     if (autoPlayList.length === 0 || autoPlayIndex >= autoPlayList.length) {
       autoPlayList = Array.from(document.querySelectorAll('.is-blurred'));
       autoPlayIndex = 0;
@@ -894,13 +886,52 @@
     document.getElementById('btnAutoPlay').innerText = '⏸ หยุดชั่วคราว';
     document.getElementById('statusTip').innerText = '▶️ กำลังไล่แสดงคำอัตโนมัติ...';
 
-    runAutoPlayStep();
-    const speed = parseFloat(document.getElementById('autoPlaySpeed').value) * 1000;
-    autoPlayTimer = setInterval(runAutoPlayStep, speed);
+    scheduleNextAutoPlayStep();
+  }
+
+  function getPrecedingTextLength(currentEl, prevEl) {
+    let charCount = 0;
+
+    if (!prevEl) {
+      const container = document.getElementById('displayArea');
+      const range = document.createRange();
+      range.setStart(container, 0);
+      range.setEndBefore(currentEl);
+      charCount = range.toString().trim().length;
+    } else {
+      const range = document.createRange();
+      range.setStartAfter(prevEl);
+      range.setEndBefore(currentEl);
+      charCount = range.toString().trim().length;
+    }
+
+    return charCount;
+  }
+
+  function scheduleNextAutoPlayStep() {
+    if (autoPlayIndex >= autoPlayList.length) {
+      pauseAutoPlay();
+      document.getElementById('btnAutoPlay').innerText = '▶ เล่นซ้ำ';
+      document.getElementById('statusTip').innerText = '✅ ไล่ครบทุกคำที่ซ่อนไว้แล้ว';
+      return;
+    }
+
+    const currentEl = autoPlayList[autoPlayIndex];
+    const prevEl = autoPlayIndex > 0 ? autoPlayList[autoPlayIndex - 1] : null;
+
+    const precedingCharCount = getPrecedingTextLength(currentEl, prevEl);
+
+    const speedMultiplier = parseFloat(document.getElementById('autoPlaySpeed').value) || 1.0;
+    const calculatedDelaySec = Math.max(MIN_DELAY_SEC, precedingCharCount * SEC_PER_CHAR) / speedMultiplier;
+
+    autoPlayTimer = setTimeout(() => {
+      runAutoPlayStep();
+      autoPlayIndex++;
+      scheduleNextAutoPlayStep();
+    }, calculatedDelaySec * 1000);
   }
 
   function runAutoPlayStep() {
-    // ปิดคำก่อนหน้ากลับเป็นแถบทึบ ก่อนเปิดคำถัดไป (โชว์ทีละคำ ไม่ค้างสะสม)
     if (autoPlayIndex > 0) {
       const prev = autoPlayList[autoPlayIndex - 1];
       if (prev) {
@@ -909,23 +940,17 @@
       }
     }
 
-    if (autoPlayIndex >= autoPlayList.length) {
-      pauseAutoPlay();
-      document.getElementById('btnAutoPlay').innerText = '▶ เล่นซ้ำ';
-      document.getElementById('statusTip').innerText = '✅ ไล่ครบทุกคำที่ซ่อนไว้แล้ว';
-      return;
-    }
-
     const current = autoPlayList[autoPlayIndex];
-    current.classList.add('revealed');
-    current.classList.add('auto-current');
-    current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    autoPlayIndex++;
+    if (current) {
+      current.classList.add('revealed');
+      current.classList.add('auto-current');
+      current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   function pauseAutoPlay() {
     if (autoPlayTimer) {
-      clearInterval(autoPlayTimer);
+      clearTimeout(autoPlayTimer);
       autoPlayTimer = null;
     }
     document.getElementById('btnAutoPlay').innerText = '▶ เล่นต่อ';
@@ -934,7 +959,7 @@
 
   function stopAutoPlay() {
     if (autoPlayTimer) {
-      clearInterval(autoPlayTimer);
+      clearTimeout(autoPlayTimer);
       autoPlayTimer = null;
     }
     autoPlayList.forEach(el => el.classList.remove('revealed', 'auto-current'));
