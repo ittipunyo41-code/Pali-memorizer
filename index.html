@@ -889,23 +889,29 @@
     scheduleNextAutoPlayStep();
   }
 
-  function getPrecedingTextLength(currentEl, prevEl) {
-    let charCount = 0;
+   function getPrecedingTextLength(currentEl, prevEl) {
+    let rawText = '';
 
     if (!prevEl) {
       const container = document.getElementById('displayArea');
       const range = document.createRange();
       range.setStart(container, 0);
       range.setEndBefore(currentEl);
-      charCount = range.toString().trim().length;
+      rawText = range.toString();
     } else {
       const range = document.createRange();
       range.setStartAfter(prevEl);
       range.setEndBefore(currentEl);
-      charCount = range.toString().trim().length;
+      rawText = range.toString();
     }
 
-    return charCount;
+    // 1. ตัดส่วนที่เป็น Tab หรือ Space ยาวๆ ตั้งแต่ 2 tabs (หรือเทียบเท่า space >= 8 ช่อง) ขึ้นไปออก
+    // 2. ตัด newline (\n) หลายๆ แถวติดกันออกด้วย เพื่อไม่ให้นับบรรทัดเว้นว่างยาว
+    const cleanedText = rawText
+      .replace(/(\t{2,}|\s{8,}|\n{2,})/g, '') // ละเว้นช่องว่าง/Tab ยาวๆ
+      .trim();
+
+    return cleanedText.length;
   }
 
   function scheduleNextAutoPlayStep() {
@@ -968,6 +974,47 @@
     const btn = document.getElementById('btnAutoPlay');
     if (btn) btn.innerText = '▶ ไล่คำอัตโนมัติ';
   }
+	
+	  // --- เพิ่มระบบกด Spacebar เพื่อไล่เปิดคำ ---
+  document.addEventListener('keydown', function (e) {
+    // ป้องกันไม่ให้ทำงานขณะกำลังพิมพ์ข้อความใน Input หรือ Textarea
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      return;
+    }
+
+    // เมื่อกดปุ่ม Spacebar (code === 'Space')
+    if (e.code === 'Space') {
+      e.preventDefault(); // ป้องกันหน้าเว็บเลื่อนลงด้านล่าง
+
+      // ถ้าอยู่ในโหมดฝึกซ้อม
+      if (isPracticeMode) {
+        if (autoPlayList.length === 0) {
+          autoPlayList = Array.from(document.querySelectorAll('.is-blurred'));
+          autoPlayIndex = 0;
+        }
+
+        // กรณีที่ 1: ถ้ากำลังเล่นไล่อัตโนมัติอยู่ ให้ Spacebar ทำหน้าที่ หยุด/เล่นต่อ
+        if (autoPlayTimer) {
+          pauseAutoPlay();
+          return;
+        }
+
+        // กรณีที่ 2: กด Spacebar เพื่อเฉลยทีละ 1 คำด้วยตัวเอง
+        if (autoPlayIndex < autoPlayList.length) {
+          runAutoPlayStep();
+          autoPlayIndex++;
+
+          // ถ้าเปิดจนครบแล้ว
+          if (autoPlayIndex >= autoPlayList.length) {
+            document.getElementById('statusTip').innerText = '✅ เปิดครบทุกคำแล้ว';
+          } else {
+            document.getElementById('statusTip').innerText = `📖 เปิดคำที่ ${autoPlayIndex}/${autoPlayList.length} (กด Spacebar เพื่อดูคำถัดไป)`;
+          }
+        }
+      }
+    }
+  });
+
 </script>
 
 </body>
