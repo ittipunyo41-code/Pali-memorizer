@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Pali & Text Blur Memorizer</title>
-  <style>
+  <style id="appCss">
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
@@ -325,6 +325,39 @@
         height: 40px;
       }
     }
+
+    /* ===== ธีมเป็นมิตร (ทับของเดิม) ===== */
+    html, body { font-family: "Noto Sans Thai", "Sarabun", Thonburi, -apple-system, "Segoe UI", sans-serif; background: #eaf1ef; color: #1f2a2e; }
+    .container { border-radius: 24px; box-shadow: 0 6px 24px rgba(31,90,80,.10); }
+    #inputSection { background: #f4faf8; border: 2px dashed #7fb8ac; }
+    #inputSection h2 { background: none; -webkit-text-fill-color: #1f7a6d; color: #1f7a6d; }
+    textarea { border: 2px solid #cfe0db; border-radius: 14px; }
+    textarea:focus { border-color: #1f7a6d; }
+    button { border-radius: 14px; }
+    button:hover { filter: brightness(1.07); }
+    button:focus-visible, .word:focus-visible, .menu-item:focus-visible { outline: 3px solid #f2b632; outline-offset: 2px; }
+    .btn-main, .toggle-sidebar-btn { background: #1f7a6d; }
+    .btn-confirm { background: #2f9e6a; }
+    .btn-random { background: #7a5cc4; }
+    .btn-toggle { background: #4a6fa5; }
+    .btn-reselect { background: #e08a1e; }
+    .btn-clear { background: #d8574a; }
+    .btn-export { background: #fff; color: #1f6f8a; border: 2px solid #b5d6e0; }
+    .sidebar-title { color: #1f7a6d; }
+    .menu-item.active { background: #1f7a6d; }
+    #displayArea { background: #fffdf8; border-color: #e6e1d3; }
+    .mark-blur { background-color: #ffd866; }
+    .toggle-sidebar-btn { flex: 0 0 36px; min-width: 36px; }
+    .practice-title { font-size: 17px; font-weight: 700; color: #1f7a6d; margin: 0 0 6px; }
+    .autoplay-bar { background: #eef5f3; border-radius: 14px; }
+    .step-row { flex: 1 1 100%; display: flex; gap: 10px; align-items: center; }
+    .btn-step { flex: 1; background: #d9ece7; color: #16594f; font-size: 16px; padding: 14px; box-shadow: none; }
+    .step-progress { min-width: 70px; text-align: center; font-weight: 700; color: #16594f; }
+    .key-hints { flex: 1 1 100%; font-size: 13px; color: #5d6b70; line-height: 1.9; }
+    kbd { background: #fff; border: 1px solid #c9d6d2; border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-family: inherit; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1f2a2e; color: #fff; padding: 11px 20px; border-radius: 999px; font-size: 14px; z-index: 2000; opacity: 0; transition: opacity .25s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
@@ -491,10 +524,12 @@
         <textarea id="inputText" placeholder="พิมพ์ หรือ เลือกบทสวดจากหมวดด้านซ้ายมือ..."></textarea>
         <div class="btn-group">
           <button class="btn-main" onclick="loadText()" style="font-size: 16px; padding: 14px 16px;">🚀 นำเข้าข้อความเพื่อซ้อมท่อง</button>
+          <button class="btn-export" onclick="exportHTML()" style="padding: 14px 16px;">💾 Export HTML (ใช้ออฟไลน์)</button>
         </div>
       </div>
 
       <div id="practiceSection" style="display: none;">
+        <div id="practiceTitle" class="practice-title"></div>
         <div class="font-control-bar">
           <span class="instructions" id="statusTip">💡 แตะเลือกคำ หรือกดปุ่ม "สุ่มซ่อน 20%"</span>
           <div>
@@ -510,10 +545,17 @@
           <button id="btnConfirm" class="btn-confirm" onclick="confirmBlur()">ตกลง (เริ่มบังคำ)</button>
           <button id="btnToggle" class="btn-toggle" onclick="toggleAll()" style="display: none;">แสดงทั้งหมด</button>
           <button id="btnReselect" class="btn-reselect" onclick="reselectWords()" style="display: none;">ปรับเลือกคำใหม่</button>
+          <button class="btn-export" onclick="exportHTML()">💾 Export HTML (ใช้ออฟไลน์)</button>
           <button class="btn-clear" onclick="resetAll()">เลือกบทใหม่</button>
         </div>
 
         <div class="autoplay-bar" id="autoplayBar" style="display: none;">
+          <div class="step-row">
+            <button class="btn-step" onclick="stepBy(-1)">◀ ย้อนกลับ</button>
+            <span id="stepProgress" class="step-progress">0/0</span>
+            <button class="btn-step" onclick="stepBy(1)">เฉลยถัดไป ▶</button>
+          </div>
+          <div class="key-hints">⌨️ คีย์ลัด: <kbd>→</kbd> <kbd>Space</kbd> <kbd>PageDown</kbd> เฉลยคำถัดไป &nbsp;·&nbsp; <kbd>←</kbd> <kbd>Backspace</kbd> <kbd>Shift+Space</kbd> <kbd>PageUp</kbd> ย้อนกลับ</div>
           <button id="btnAutoPlay" class="btn-autoplay" style="flex: 0 0 auto; min-width: 150px;" onclick="toggleAutoPlay()">▶ ไล่คำอัตโนมัติ</button>
           <button id="btnAutoStop" class="btn-autostop" style="flex: 0 0 auto; min-width: 90px;" onclick="stopAutoPlay()">■ หยุด</button>
           <label for="autoPlaySpeed">⏱ ความเร็ว</label>
@@ -526,7 +568,9 @@
   </div>
 </div>
 
-<script>
+<script id="appScript">
+  const EXPORTED = window.__EXPORT__ || null;
+  const PRISTINE = document.querySelector('.container').outerHTML;
   let PRESET_DATA = {};
   let presetDataLoaded = false;
 
@@ -534,7 +578,7 @@
     el.classList.add('menu-loading');
   });
 
-  fetch('content-template.json')
+  (EXPORTED ? Promise.reject('offline-export') : fetch('content-template.json'))
     .then(response => {
       if (!response.ok) throw new Error('โหลดไฟล์ไม่สำเร็จ: ' + response.status);
       return response.json();
@@ -557,6 +601,7 @@
       });
     })
     .catch(err => {
+      if (EXPORTED) return;
       console.error('โหลด content-template.json ไม่สำเร็จ:', err);
       document.getElementById('statusTip').innerText =
         '⚠️ โหลดเนื้อหาไม่สำเร็จ (เช็คว่าเปิดผ่านเว็บเซิร์ฟเวอร์ ไม่ใช่เปิดไฟล์ตรงๆ) — ยังพิมพ์ข้อความเองได้ตามปกติ';
@@ -570,6 +615,8 @@
   let isSidebarHidden = false;
   let currentFontSize = 18;
   let blurPressCount = 0;
+  let currentSource = '';
+  let currentTitle = EXPORTED ? (EXPORTED.title || '') : '';
 
   // --- สถานะสำหรับโหมด "ไล่คำอัตโนมัติ" ---
   let autoPlayTimer = null;      // เก็บ ID ของ setTimeout
@@ -593,7 +640,7 @@
   }
 
   window.addEventListener('load', () => {
-    if (localStorage.getItem('sidebarHidden') === 'true') {
+    if (!EXPORTED && localStorage.getItem('sidebarHidden') === 'true') {
       const sidebar = document.querySelector('.sidebar');
       const appShell = document.querySelector('.app-shell');
       const toggleBtn = document.querySelector('.toggle-sidebar-btn');
@@ -616,6 +663,7 @@
   function loadPreset(key, element) {
     setActiveMenu(element);
     resetAll();
+    currentTitle = element.innerText.trim();
     const defaultText = PRESET_DATA[key] || `บทสวดหมวด [${element.innerText}] (สามารถพิมพ์หรือคัดลอกบาลีฉบับเต็มมาวางใส่แทนตรงนี้ได้)`;
     document.getElementById('inputText').value = defaultText;
     loadText();
@@ -672,6 +720,8 @@
     if (!text) return alert('กรุณาเลือกบทสวดหรือใส่ข้อความก่อนครับ');
 
     stopAutoPlay();
+    currentSource = text;
+    document.getElementById('practiceTitle').textContent = currentTitle;
 
     const displayArea = document.getElementById('displayArea');
     displayArea.innerHTML = '';
@@ -802,7 +852,7 @@
     document.getElementById('btnReselect').style.display = 'inline-block';
     document.getElementById('btnToggle').innerText = 'แสดงทั้งหมด';
     document.getElementById('autoplayBar').style.display = 'flex';
-    document.getElementById('statusTip').innerText = '💡 แตะที่แถบสีทึบเพื่อเปิดดูเฉลย หรือลองกด "ไล่คำอัตโนมัติ"';
+    stopAutoPlay(); ensureList(); updateStepStatus();
   }
 
   function reselectWords() {
@@ -854,6 +904,7 @@
     isPracticeMode = false;
     isAllRevealed = false;
     blurPressCount = 0;
+    currentTitle = '';
   }
 
   // --- ฟังก์ชันไล่คำอัตโนมัติ (นับตัวอักษรของข้อความก่อนหน้า) ---
@@ -933,6 +984,7 @@
     autoPlayTimer = setTimeout(() => {
       runAutoPlayStep();
       autoPlayIndex++;
+      updateProgress();
       scheduleNextAutoPlayStep();
     }, calculatedDelaySec * 1000);
   }
@@ -974,46 +1026,144 @@
     const btn = document.getElementById('btnAutoPlay');
     if (btn) btn.innerText = '▶ ไล่คำอัตโนมัติ';
   }
-	
-	  // --- เพิ่มระบบกด Spacebar เพื่อไล่เปิดคำ ---
-  document.addEventListener('keydown', function (e) {
-    // ป้องกันไม่ให้ทำงานขณะกำลังพิมพ์ข้อความใน Input หรือ Textarea
-    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-      return;
+  // --- เฉลยทีละคำด้วยมือ: ไปข้างหน้า / ย้อนกลับ ---
+  function ensureList() {
+    const cur = Array.from(document.querySelectorAll('.is-blurred'));
+    if (autoPlayList.length !== cur.length) {
+      autoPlayList = cur;
+      autoPlayIndex = Math.min(autoPlayIndex, cur.length);
     }
+  }
 
-    // เมื่อกดปุ่ม Spacebar (code === 'Space')
-    if (e.code === 'Space') {
-      e.preventDefault(); // ป้องกันหน้าเว็บเลื่อนลงด้านล่าง
+  function updateProgress() {
+    const p = document.getElementById('stepProgress');
+    if (p) p.innerText = autoPlayIndex + '/' + autoPlayList.length;
+  }
 
-      // ถ้าอยู่ในโหมดฝึกซ้อม
-      if (isPracticeMode) {
-        if (autoPlayList.length === 0) {
-          autoPlayList = Array.from(document.querySelectorAll('.is-blurred'));
-          autoPlayIndex = 0;
-        }
+  function updateStepStatus() {
+    const n = autoPlayList.length;
+    updateProgress();
+    document.getElementById('statusTip').innerText =
+      autoPlayIndex === 0 ? `📖 พร้อมเฉลย ${n} คำ — กด → หรือ Space เพื่อเริ่ม`
+      : autoPlayIndex >= n ? '✅ เปิดครบทุกคำแล้ว (กด ← เพื่อย้อนกลับ)'
+      : `📖 คำที่ ${autoPlayIndex}/${n} (← ย้อน · → ถัดไป)`;
+  }
 
-        // กรณีที่ 1: ถ้ากำลังเล่นไล่อัตโนมัติอยู่ ให้ Spacebar ทำหน้าที่ หยุด/เล่นต่อ
-        if (autoPlayTimer) {
-          pauseAutoPlay();
-          return;
-        }
+  function stepBy(dir) {
+    if (!isPracticeMode) return;
+    if (autoPlayTimer) pauseAutoPlay();
+    ensureList();
+    const n = autoPlayList.length;
+    if (n === 0) return;
 
-        // กรณีที่ 2: กด Spacebar เพื่อเฉลยทีละ 1 คำด้วยตัวเอง
-        if (autoPlayIndex < autoPlayList.length) {
-          runAutoPlayStep();
-          autoPlayIndex++;
-
-          // ถ้าเปิดจนครบแล้ว
-          if (autoPlayIndex >= autoPlayList.length) {
-            document.getElementById('statusTip').innerText = '✅ เปิดครบทุกคำแล้ว';
-          } else {
-            document.getElementById('statusTip').innerText = `📖 เปิดคำที่ ${autoPlayIndex}/${autoPlayList.length} (กด Spacebar เพื่อดูคำถัดไป)`;
-          }
-        }
+    if (dir > 0) {
+      if (autoPlayIndex >= n) return;
+      runAutoPlayStep();
+      autoPlayIndex++;
+    } else {
+      if (autoPlayIndex <= 0) return;
+      autoPlayList[autoPlayIndex - 1].classList.remove('revealed', 'auto-current');
+      autoPlayIndex--;
+      if (autoPlayIndex > 0) {
+        const prev = autoPlayList[autoPlayIndex - 1];
+        prev.classList.add('revealed', 'auto-current');
+        prev.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
+    updateStepStatus();
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const isSpace = e.code === 'Space';
+    const isNext = (isSpace && !e.shiftKey) || ['ArrowRight', 'PageDown', 'BrowserForward'].includes(e.key);
+    const isPrev = (isSpace && e.shiftKey) || ['ArrowLeft', 'PageUp', 'Backspace', 'BrowserBack'].includes(e.key);
+    if (!isNext && !isPrev) return;
+    if (!isPracticeMode) { if (isSpace) e.preventDefault(); return; }
+
+    e.preventDefault();
+    if (isSpace && !e.shiftKey && autoPlayTimer) { pauseAutoPlay(); return; }
+    stepBy(isNext ? 1 : -1);
   });
+
+  // ปุ่มที่เพิ่งกดไม่ต้องค้างโฟกัส (กัน Space ไปกดปุ่มซ้ำ)
+  document.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) b.blur();
+  });
+
+  // --- Export เป็นไฟล์ HTML เดี่ยว ใช้ออฟไลน์ได้ ---
+  function toast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  function getExportState() {
+    const inPractice = document.getElementById('practiceSection').style.display === 'block';
+    if (!inPractice) {
+      return { text: document.getElementById('inputText').value.trim(), hidden: [], practice: false, font: 18 };
+    }
+    const hidden = [];
+    document.querySelectorAll('.word').forEach((w, i) => {
+      if (w.classList.contains('mark-blur') || w.classList.contains('is-blurred')) hidden.push(i);
+    });
+    return { text: currentSource, hidden, practice: isPracticeMode, font: currentFontSize };
+  }
+
+  function exportHTML() {
+    const st = getExportState();
+    if (!st.text) return alert('กรุณาพิมพ์ข้อความหรือเลือกบทสวดก่อนครับ');
+    st.title = currentTitle || 'ข้อความของฉัน';
+
+    const data = JSON.stringify(st)
+      .replace(/</g, '\\u003c')
+      .replace(/[\u2028\u2029]/g, c => '\\u' + c.charCodeAt(0).toString(16));
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const css = document.getElementById('appCss').textContent;
+    const js = document.getElementById('appScript').textContent;
+
+    const html = '<!DOCTYPE html>\n<html lang="th"><head><meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+      '<title>' + esc(st.title) + ' – ท่องจำออฟไลน์</title>' +
+      '<style id="appCss">' + css + '</style></head><body>' +
+      '<div class="app-shell"><div class="main-content">' + PRISTINE + '</div></div>' +
+      '<script>window.__EXPORT__=' + data + ';<\/script>' +
+      '<script id="appScript">' + js + '<\/script></body></html>';
+
+    const fname = ('pali-' + st.title).replace(/[\\/:*?"<>|\s]+/g, '-').slice(0, 60) + '.html';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('💾 บันทึกไฟล์แล้ว: ' + fname);
+  }
+
+  // --- เปิดไฟล์ที่ export มา: โหลดข้อความ + คำที่ซ่อนไว้กลับมา ---
+  if (EXPORTED) {
+    document.getElementById('inputText').value = EXPORTED.text;
+    loadText();
+    if (EXPORTED.font) {
+      currentFontSize = EXPORTED.font;
+      document.getElementById('displayArea').style.fontSize = currentFontSize + 'px';
+    }
+    const ws = document.querySelectorAll('.word');
+    (EXPORTED.hidden || []).forEach(i => { if (ws[i]) ws[i].classList.add('mark-blur'); });
+    if (EXPORTED.practice && (EXPORTED.hidden || []).length) confirmBlur();
+  }
 
 </script>
 
